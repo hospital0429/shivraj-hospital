@@ -160,3 +160,68 @@ fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
 
 </body>
 </html>
+<script>
+
+const sheetID = "1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
+
+let allData = [];
+
+// load data from sheet
+fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
+.then(res => res.json())
+.then(data => {
+
+    allData = data;
+
+    // default = today/latest
+    loadLatest();
+
+});
+
+// 🔥 Load latest (today)
+function loadLatest() {
+
+    const latest = allData[allData.length - 1];
+
+    showData(latest);
+
+    document.getElementById("todayTitle").innerText =
+        "Today Report: " + latest["Date"];
+}
+
+// 🔥 Search by date
+function loadData() {
+
+    const date = document.getElementById("selectedDate").value;
+
+    const found = allData.find(d => d["Date"] === date);
+
+    if(found) {
+        showData(found);
+        document.getElementById("todayTitle").innerText =
+            "Report Date: " + date;
+    } else {
+        alert("No data found for selected date");
+    }
+}
+
+// 🔥 show dashboard data
+function showData(latest) {
+
+    const male = Number(latest["OPD Male"] || 0);
+    const female = Number(latest["OPD Female"] || 0);
+
+    document.getElementById("opd").innerText = male + female + " (M:" + male + " F:" + female + ")";
+
+    document.getElementById("er").innerText =
+        "R:" + (latest["ER Red"] || 0) +
+        " Y:" + (latest["ER Yellow"] || 0) +
+        " G:" + (latest["ER Green"] || 0);
+
+    document.getElementById("lab").innerText = latest["Lab"] || 0;
+    document.getElementById("pharmacy").innerText = latest["Pharmacy"] || 0;
+    document.getElementById("delivery").innerText = latest["Delivery"] || 0;
+    document.getElementById("anc").innerText = latest["ANC"] || 0;
+}
+
+</script>
