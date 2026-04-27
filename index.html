@@ -193,16 +193,21 @@ function loadLatest() {
 // SEARCH BY DATE
 function loadData() {
 
-    const date = document.getElementById("selectedDate").value;
+    const date = document.getElementById("selectedDate").value.trim();
 
-    const found = allData.find(d => d["Date"] === date);
+    const found = allData.find(d => {
+
+        const sheetDate = (d["Date"] || "").trim();
+
+        return sheetDate === date;
+    });
 
     if(found) {
         showData(found);
         document.getElementById("reportTitle").innerText =
             "Report Date: " + date;
     } else {
-        alert("No data found for this date");
+        alert("No report found for this date");
     }
 }
 
