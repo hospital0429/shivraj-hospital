@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shivraj Hospital Dashboard</title>
+
+<style>
+body {
+    margin:0;
+    font-family: 'Segoe UI', sans-serif;
+    background:#f0f6ff;
+}
+
+.header {
+    background:#0d6efd;
+    color:white;
+    padding:15px;
+    text-align:center;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.container {
+    padding:20px;
+}
+
+.grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap:15px;
+}
+
+.card {
+    background:white;
+    border-radius:10px;
+    padding:20px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+    margin:0;
+    color:#0d6efd;
+}
+
+.value {
+    font-size:24px;
+    margin-top:10px;
+    font-weight:bold;
+}
+
+.section {
+    margin-top:30px;
+}
+
+.section h2 {
+    color:#0d6efd;
+    border-bottom:2px solid #0d6efd;
+}
+
+.list {
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.list li {
+    padding:8px;
+    border-bottom:1px solid #ddd;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+Shivraj Hospital Dashboard
+</div>
+
+<div class="container">
+
+<div class="grid">
+<div class="card"><h3>OPD Patients</h3><div class="value" id="opd">Loading...</div></div>
+<div class="card"><h3>Emergency</h3><div class="value" id="er">Loading...</div></div>
+<div class="card"><h3>Lab</h3><div class="value" id="lab">Loading...</div></div>
+<div class="card"><h3>Pharmacy</h3><div class="value" id="pharmacy">Loading...</div></div>
+<div class="card"><h3>Delivery</h3><div class="value" id="delivery">Loading...</div></div>
+<div class="card"><h3>ANC</h3><div class="value" id="anc">Loading...</div></div>
+</div>
+
+<div class="section">
+<h2>Available Doctors</h2>
+<div class="list">
+<ul id="doctors"><li>Loading...</li></ul>
+</div>
+</div>
+
+<div class="section">
+<h2>Notices</h2>
+<div class="list">
+<ul id="notices"><li>Loading...</li></ul>
+</div>
+</div>
+
+</div>
+
+<script>
+
+// 🔗 YOUR GOOGLE SHEET API
+const sheetID = "1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
+
+// DAILY DATA
+fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
+.then(res => res.json())
+.then(data => {
+
+    const latest = data[data.length - 1];
+
+    const opdTotal =
+        Number(latest["OPD Male"]) +
+        Number(latest["OPD Female"]);
+
+    document.getElementById("opd").innerText = opdTotal;
+
+    document.getElementById("er").innerText =
+        "R:" + latest["ER Red"] +
+        " Y:" + latest["ER Yellow"] +
+        " G:" + latest["ER Green"];
+
+    document.getElementById("lab").innerText = latest["Lab"];
+    document.getElementById("pharmacy").innerText = latest["Pharmacy"];
+    document.getElementById("delivery").innerText = latest["Delivery"];
+    document.getElementById("anc").innerText = latest["ANC"];
+});
+
+// DOCTORS
+fetch(`https://opensheet.elk.sh/${sheetID}/DOCTORS`)
+.then(res => res.json())
+.then(data => {
+    let html = "";
+    data.forEach(doc => {
+        html += `<li>${doc.Name} - ${doc.Department} (${doc.Day})</li>`;
+    });
+    document.getElementById("doctors").innerHTML = html;
+});
+
+// NOTICES
+fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
+.then(res => res.json())
+.then(data => {
+    let html = "";
+    data.reverse().forEach(n => {
+        html += `<li>${n.Date} - ${n.Title}</li>`;
+    });
+    document.getElementById("notices").innerHTML = html;
+});
+
+</script>
+
+</body>
+</html>
