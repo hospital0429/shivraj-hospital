@@ -193,11 +193,19 @@ function loadLatest() {
 // SEARCH BY DATE
 function loadData() {
 
-    const date = document.getElementById("selectedDate").value.trim();
+    const date = document.getElementById("selectedDate").value;
 
     const found = allData.find(d => {
 
-        const sheetDate = (d["Date"] || "").trim();
+        let sheetDate = d["Date"];
+
+        if(!sheetDate) return false;
+
+        // convert to string & clean
+        sheetDate = sheetDate.toString().trim();
+
+        // handle full datetime case
+        sheetDate = sheetDate.split(" ")[0];
 
         return sheetDate === date;
     });
@@ -208,9 +216,9 @@ function loadData() {
             "Report Date: " + date;
     } else {
         alert("No report found for this date");
+        console.log("DEBUG DATA:", allData); // important debug
     }
 }
-
 // SHOW DATA
 function showData(d) {
 
