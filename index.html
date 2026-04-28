@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS v24</title>
+<title>Shivraj Hospital MIS v31.1</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -30,7 +30,7 @@ text-align:center;
 
 .section{margin-top:20px;}
 
-input,button,select{
+input,button{
 padding:8px;border-radius:6px;border:1px solid #ccc;
 }
 
@@ -42,23 +42,10 @@ background:white;padding:12px;border-radius:10px;margin-bottom:10px;
 
 img{width:100%;border-radius:8px;}
 
-/* 🎯 COLOR FIX */
-.doctor-name{
-color:red;
-font-weight:bold;
-}
+.doctor-name{color:red;font-weight:bold;}
+.staff-name{color:blue;font-weight:bold;}
+.staff-post{color:black;font-size:13px;}
 
-.staff-name{
-color:blue;
-font-weight:bold;
-}
-
-.staff-post{
-color:black;
-font-size:13px;
-}
-
-/* PRINT */
 @media print{
 body *{visibility:hidden;}
 #printArea,#printArea *{visibility:visible;}
@@ -70,22 +57,22 @@ body *{visibility:hidden;}
 
 <body>
 
-<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v24</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v31.1</div>
 
 <div class="container">
 
 <!-- FILTER -->
 <div class="no-print" style="text-align:center;">
 <input type="date" id="date">
-<button onclick="loadDaily()">Load</button>
-<button onclick="window.print()">Print</button>
-</div>
+<button onclick="loadDaily()">Daily Load</button>
+<button onclick="printDaily()">Print Daily</button>
 
-<!-- RANGE -->
-<div class="no-print" style="text-align:center;margin-top:10px;">
+<br><br>
+
 <input type="date" id="from">
 <input type="date" id="to">
-<button onclick="rangeReport()">Range Report</button>
+<button onclick="loadRange()">Range Report</button>
+<button onclick="window.print()">Print Range</button>
 </div>
 
 <!-- PRINT AREA -->
@@ -93,8 +80,6 @@ body *{visibility:hidden;}
 
 <h2 style="text-align:center;">SHIVRAJ HOSPITAL</h2>
 <h3 id="title"></h3>
-
-<div id="rangeBox"></div>
 
 <hr>
 
@@ -114,32 +99,23 @@ body *{visibility:hidden;}
 
 </div>
 
-<br>
-<div style="text-align:right;">MEDICAL RECORDER __________</div>
-
 </div>
 
-<!-- GRAPH -->
+<!-- PIE -->
 <div class="section no-print">
-<h3>📊 Monthly Graph</h3>
-<canvas id="bar"></canvas>
+<h3>👨‍⚕️ OPD Gender Distribution</h3>
+<canvas id="opdPie"></canvas>
 </div>
 
+<!-- CONSULTANT (FIXED FINAL) -->
 <div class="section no-print">
-<h3>📈 Occupancy Trend</h3>
-<canvas id="line"></canvas>
-</div>
-
-<!-- CONSULTANT -->
-<div class="section no-print">
-<h3>🩺 Consultant (Monday)</h3>
+<h3>🩺 Consultant Services</h3>
 <div class="grid" id="consult"></div>
 </div>
 
-<!-- ROSTER -->
+<!-- DUTY ROSTER -->
 <div class="section no-print">
-<h3>📅 Duty Roster</h3>
-<select id="rosterDate"></select>
+<h3>📅 Today's Duty Roster</h3>
 <div class="grid" id="roster"></div>
 </div>
 
@@ -180,27 +156,18 @@ return await r.json();
 }catch{return [];}
 }
 
-let daily=[], monthly=[], consult=[], rosterData=[], noticeData=[];
+let daily=[];
 
 /* INIT */
 async function init(){
-
 daily=await get("DAILY DATA");
-monthly=await get("MONTHLY DATA");
-consult=await get("CONSULTANT_SCHEDULE");
-rosterData=await get("ROSTER");
-noticeData=await get("NOTICES");
-
 date.value=new Date().toISOString().split("T")[0];
-
 loadDaily();
-loadGraph();
+loadPeople();
+loadNotice();
 loadConsult();
 loadRoster();
-loadNotice();
-loadPeople();
 }
-
 init();
 
 /* DAILY */
@@ -209,8 +176,15 @@ function loadDaily(){
 let d=daily.find(x=>x.Date && x.Date.includes(date.value));
 if(!d) return;
 
+setReport(d,"Daily Report - "+date.value);
+loadPie(d);
+}
+
+/* REPORT */
+function setReport(d,titleText){
+
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
-er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
+er.innerText=d.ER||0;
 lab.innerText=d.Lab||0;
 pharmacy.innerText=d.Pharmacy||0;
 ecg.innerText=d.ECG||0;
@@ -223,128 +197,68 @@ let beds=+d["Total Beds"]||1;
 
 admitted.innerText=adm;
 discharged.innerText=dis;
-occupancy.innerText=((adm/beds)*100).toFixed(1)+"%";
 
-title.innerText="Daily Report - "+date.value;
-rangeBox.innerHTML="";
+let occ=(adm/beds)*100;
+occupancy.innerText=occ.toFixed(1)+"%";
+
+if(occ<60) occupancy.style.color="green";
+else if(occ<85) occupancy.style.color="orange";
+else occupancy.style.color="red";
+
+title.innerText=titleText;
 }
 
-/* RANGE */
-function rangeReport(){
+/* PIE */
+function loadPie(d){
 
-let f=new Date(from.value);
-let t=new Date(to.value);
+let male=+d["OPD Male"]||0;
+let female=+d["OPD Female"]||0;
 
-let arr=daily.filter(x=>{
-let d=new Date(x.Date);
-return d>=f && d<=t;
-});
-
-let s={opd:0,er:0,lab:0,pharmacy:0,xray:0,adm:0,dis:0};
-
-arr.forEach(x=>{
-s.opd+=(+x["OPD Male"]||0)+(+x["OPD Female"]||0);
-s.er+=(+x["ER Red"]||0)+(+x["ER Yellow"]||0)+(+x["ER Green"]||0);
-s.lab+=+x.Lab||0;
-s.pharmacy+=+x.Pharmacy||0;
-s.xray+=+x["X-Ray"]||0;
-s.adm+=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
-s.dis+=(+x["Discharged Male"]||0)+(+x["Discharged Female"]||0);
-});
-
-title.innerText=`Range Report (${from.value} to ${to.value})`;
-
-rangeBox.innerHTML=`
-<div class="card">
-<p><b>From:</b> ${from.value}</p>
-<p><b>To:</b> ${to.value}</p>
-<hr>
-<p>OPD: ${s.opd}</p>
-<p>ER: ${s.er}</p>
-<p>Lab: ${s.lab}</p>
-<p>X-Ray: ${s.xray}</p>
-<p>Admitted: ${s.adm}</p>
-<p>Discharged: ${s.dis}</p>
-</div>`;
-}
-
-/* GRAPH */
-function loadGraph(){
-
-new Chart(bar,{
-type:'bar',
+new Chart(opdPie,{
+type:'pie',
 data:{
-labels:monthly.map(x=>x.Month),
-datasets:[
-{label:'OPD',data:monthly.map(x=>+x.OPD||0),backgroundColor:'blue'},
-{label:'ER',data:monthly.map(x=>+x.ER||0),backgroundColor:'red'}
-]
-}
+labels:[`Male (${male})`,`Female (${female})`],
+datasets:[{data:[male,female],backgroundColor:['red','blue']}]
+},
+options:{animation:{animateScale:true,animateRotate:true}}
 });
-
-new Chart(line,{
-type:'line',
-data:{
-labels:monthly.map(x=>x.Month),
-datasets:[{
-label:'Occupancy %',
-data:monthly.map(x=>{
-let t=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
-let b=+x["Total Beds"]||1;
-return (t/b*100).toFixed(1);
-}),
-borderColor:'orange'
-}]
-}
-});
-
 }
 
-/* CONSULTANT */
-function loadConsult(){
-let today=new Date();
-today.setDate(today.getDate()-today.getDay()+1);
-let mon=today.toISOString().split("T")[0];
+/* CONSULTANT FIXED FINAL */
+async function loadConsult(){
 
-let list=consult.filter(x=>x.Date===mon);
+let c=await get("CONSULTANT");
 
-consult.innerHTML=list.map(x=>`
+consult.innerHTML=(c||[]).map(x=>`
 <div class="card">
-<h3>${x.Department}</h3>
-<p>${x.Doctor}</p>
-</div>`).join('');
+
+<h3 style="color:#0d6efd">${x.Department||''}</h3>
+
+<p><b>Ortho:</b> ${x.Ortho||'-'}</p>
+<p><b>Gyne:</b> ${x.Gyne||'-'}</p>
+<p><b>Psych:</b> ${x.Psychiatric||x.Psych||'-'}</p>
+<p><b>ENT:</b> ${x.ENT||'-'}</p>
+<p><b>Derma:</b> ${x.Derma||'-'}</p>
+<p><b>Pedia:</b> ${x.Pedia||'-'}</p>
+
+</div>
+`).join('');
 }
 
 /* ROSTER */
-function loadRoster(){
+async function loadRoster(){
+let r=await get("ROSTER");
+let today=date.value;
 
-let dates=[...new Set(rosterData.map(x=>x.Date))];
-rosterDate.innerHTML=dates.map(d=>`<option>${d}</option>`).join('');
-rosterDate.onchange=showRoster;
-showRoster();
-}
+let f=(r||[]).filter(x=>x.Date && x.Date.includes(today));
 
-function showRoster(){
-let d=rosterDate.value;
-let list=rosterData.filter(x=>x.Date===d);
-
-roster.innerHTML=list.map(x=>`
+roster.innerHTML=f.map(x=>`
 <div class="card">
-<h3>${x.Doctor}</h3>
-<p>${x.Department}</p>
-<p>${x.Shift}</p>
-</div>`).join('');
-}
-
-/* NOTICE */
-function loadNotice(){
-notice.innerHTML=noticeData.map(n=>`
-<div class="notice-card">
-<h3>${n.Title}</h3>
-<p>${n.Description}</p>
-<a href="${n.PDF}" target="_blank">Open</a> |
-<a href="${n.PDF}" download>Download</a>
-</div>`).join('');
+<h3>${x.Doctor||''}</h3>
+<p>${x.Department||''}</p>
+<p>${x.Shift||''}</p>
+</div>
+`).join('');
 }
 
 /* PEOPLE */
@@ -354,27 +268,42 @@ let doc=await get("DOCTORS");
 let stf=await get("STAFF");
 let hd=await get("HEADS");
 
-document.getElementById("doctors").innerHTML=
-(doc||[]).map(d=>`
+doctors.innerHTML=(doc||[]).map(d=>`
 <div class="card">
 <img src="${d.Photo||''}">
 <h3 class="doctor-name">${d.Name||''}</h3>
-</div>`).join('');
+</div>
+`).join('');
 
-document.getElementById("staff").innerHTML=
-(stf||[]).map(s=>`
+staff.innerHTML=(stf||[]).map(s=>`
 <div class="card">
 <img src="${s.Photo||''}">
 <h3 class="staff-name">${s.Name||''}</h3>
 <p class="staff-post">${s.Position||''}</p>
-</div>`).join('');
+</div>
+`).join('');
 
-document.getElementById("heads").innerHTML=
-(hd||[]).map(h=>`
+heads.innerHTML=(hd||[]).map(h=>`
 <div class="card">
 <img src="${h.Photo||''}">
 <h3>${h.Name||''}</h3>
-</div>`).join('');
+</div>
+`).join('');
+}
+
+/* NOTICE */
+async function loadNotice(){
+
+let n=await get("NOTICES");
+
+notice.innerHTML=(n||[]).map(x=>`
+<div class="notice-card">
+<h3>${x.Title||''}</h3>
+<p>${x.Description||''}</p>
+<a href="${x.PDF}" target="_blank">Open</a> |
+<a href="${x.PDF}" download>Download</a>
+</div>
+`).join('');
 }
 
 </script>
