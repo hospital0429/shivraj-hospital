@@ -2,29 +2,63 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS - FINAL</title>
+<title>Shivraj Hospital MIS v24</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{margin:0;font-family:Arial;background:#eef5ff;}
-.header{background:#0d6efd;color:white;text-align:center;padding:15px;font-size:20px;}
+
+.header{
+background:#0d6efd;color:white;text-align:center;
+padding:15px;font-size:20px;
+}
+
 .container{padding:20px;}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+gap:12px;
+}
 
 .card{
 background:white;padding:12px;border-radius:10px;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);text-align:center;
+box-shadow:0 2px 6px rgba(0,0,0,0.1);
+text-align:center;
 }
 
 .section{margin-top:20px;}
 
-input,button,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
+input,button,select{
+padding:8px;border-radius:6px;border:1px solid #ccc;
+}
+
 button{background:#0d6efd;color:white;border:none;cursor:pointer;}
 
-.notice-card{background:white;padding:12px;border-radius:10px;margin-bottom:10px;}
+.notice-card{
+background:white;padding:12px;border-radius:10px;margin-bottom:10px;
+}
+
 img{width:100%;border-radius:8px;}
 
+/* 🎯 COLOR FIX */
+.doctor-name{
+color:red;
+font-weight:bold;
+}
+
+.staff-name{
+color:blue;
+font-weight:bold;
+}
+
+.staff-post{
+color:black;
+font-size:13px;
+}
+
+/* PRINT */
 @media print{
 body *{visibility:hidden;}
 #printArea,#printArea *{visibility:visible;}
@@ -36,7 +70,7 @@ body *{visibility:hidden;}
 
 <body>
 
-<div class="header no-print">🏥 Shivraj Hospital MIS System</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v24</div>
 
 <div class="container">
 
@@ -65,16 +99,22 @@ body *{visibility:hidden;}
 <hr>
 
 <div class="grid">
+
 <div class="card">OPD<br><b id="opd">0</b></div>
 <div class="card">ER<br><b id="er">0</b></div>
 <div class="card">Lab<br><b id="lab">0</b></div>
 <div class="card">Pharmacy<br><b id="pharmacy">0</b></div>
 <div class="card">ECG<br><b id="ecg">0</b></div>
 <div class="card">USG<br><b id="usg">0</b></div>
-<div class="card">Indoor<br><b id="indoor">0</b></div>
+<div class="card">X-Ray<br><b id="xray">0</b></div>
+
+<div class="card">Admitted<br><b id="admitted">0</b></div>
+<div class="card">Discharged<br><b id="discharged">0</b></div>
+<div class="card">Occupancy<br><b id="occupancy">0%</b></div>
+
 </div>
 
-<br><br>
+<br>
 <div style="text-align:right;">MEDICAL RECORDER __________</div>
 
 </div>
@@ -92,7 +132,7 @@ body *{visibility:hidden;}
 
 <!-- CONSULTANT -->
 <div class="section no-print">
-<h3>🩺 Monday Consultant</h3>
+<h3>🩺 Consultant (Monday)</h3>
 <div class="grid" id="consult"></div>
 </div>
 
@@ -117,7 +157,7 @@ body *{visibility:hidden;}
 
 <!-- HEADS -->
 <div class="section no-print">
-<h3>🏢 Department Heads</h3>
+<h3>🏢 Heads</h3>
 <div class="grid" id="heads"></div>
 </div>
 
@@ -137,7 +177,7 @@ async function get(s){
 try{
 let r=await fetch(`https://opensheet.elk.sh/${sheetID}/${s}`);
 return await r.json();
-}catch{ return [];}
+}catch{return [];}
 }
 
 let daily=[], monthly=[], consult=[], rosterData=[], noticeData=[];
@@ -154,7 +194,7 @@ noticeData=await get("NOTICES");
 date.value=new Date().toISOString().split("T")[0];
 
 loadDaily();
-loadGraphs();
+loadGraph();
 loadConsult();
 loadRoster();
 loadNotice();
@@ -175,7 +215,15 @@ lab.innerText=d.Lab||0;
 pharmacy.innerText=d.Pharmacy||0;
 ecg.innerText=d.ECG||0;
 usg.innerText=d.USG||0;
-indoor.innerText=(+d["Admitted Male"]||0)+(+d["Admitted Female"]||0);
+xray.innerText=d["X-Ray"]||0;
+
+let adm=(+d["Admitted Male"]||0)+(+d["Admitted Female"]||0);
+let dis=(+d["Discharged Male"]||0)+(+d["Discharged Female"]||0);
+let beds=+d["Total Beds"]||1;
+
+admitted.innerText=adm;
+discharged.innerText=dis;
+occupancy.innerText=((adm/beds)*100).toFixed(1)+"%";
 
 title.innerText="Daily Report - "+date.value;
 rangeBox.innerHTML="";
@@ -192,33 +240,36 @@ let d=new Date(x.Date);
 return d>=f && d<=t;
 });
 
-let s={opd:0,er:0,lab:0,pharmacy:0,ecg:0,usg:0,indoor:0};
+let s={opd:0,er:0,lab:0,pharmacy:0,xray:0,adm:0,dis:0};
 
 arr.forEach(x=>{
 s.opd+=(+x["OPD Male"]||0)+(+x["OPD Female"]||0);
 s.er+=(+x["ER Red"]||0)+(+x["ER Yellow"]||0)+(+x["ER Green"]||0);
 s.lab+=+x.Lab||0;
 s.pharmacy+=+x.Pharmacy||0;
-s.ecg+=+x.ECG||0;
-s.usg+=+x.USG||0;
-s.indoor+=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
+s.xray+=+x["X-Ray"]||0;
+s.adm+=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
+s.dis+=(+x["Discharged Male"]||0)+(+x["Discharged Female"]||0);
 });
 
 title.innerText=`Range Report (${from.value} to ${to.value})`;
 
 rangeBox.innerHTML=`
 <div class="card">
-<p><b>From:</b> ${from.value} | <b>To:</b> ${to.value}</p>
+<p><b>From:</b> ${from.value}</p>
+<p><b>To:</b> ${to.value}</p>
+<hr>
 <p>OPD: ${s.opd}</p>
 <p>ER: ${s.er}</p>
 <p>Lab: ${s.lab}</p>
-<p>Pharmacy: ${s.pharmacy}</p>
-<p>Indoor: ${s.indoor}</p>
+<p>X-Ray: ${s.xray}</p>
+<p>Admitted: ${s.adm}</p>
+<p>Discharged: ${s.dis}</p>
 </div>`;
 }
 
 /* GRAPH */
-function loadGraphs(){
+function loadGraph(){
 
 new Chart(bar,{
 type:'bar',
@@ -269,7 +320,6 @@ function loadRoster(){
 
 let dates=[...new Set(rosterData.map(x=>x.Date))];
 rosterDate.innerHTML=dates.map(d=>`<option>${d}</option>`).join('');
-
 rosterDate.onchange=showRoster;
 showRoster();
 }
@@ -288,7 +338,6 @@ roster.innerHTML=list.map(x=>`
 
 /* NOTICE */
 function loadNotice(){
-
 notice.innerHTML=noticeData.map(n=>`
 <div class="notice-card">
 <h3>${n.Title}</h3>
@@ -301,29 +350,30 @@ notice.innerHTML=noticeData.map(n=>`
 /* PEOPLE */
 async function loadPeople(){
 
-let doctorsData = await get("DOCTORS");
-let staffData = await get("STAFF");
-let headsData = await get("HEADS");
+let doc=await get("DOCTORS");
+let stf=await get("STAFF");
+let hd=await get("HEADS");
 
-doctors.innerHTML = doctorsData.map(d=>`
+document.getElementById("doctors").innerHTML=
+(doc||[]).map(d=>`
 <div class="card">
-<img src="${d.Photo||''}" onerror="this.style.display='none'">
-<h3>${d.Name||''}</h3>
-<p>${d.Department||''}</p>
+<img src="${d.Photo||''}">
+<h3 class="doctor-name">${d.Name||''}</h3>
 </div>`).join('');
 
-staff.innerHTML = staffData.map(s=>`
+document.getElementById("staff").innerHTML=
+(stf||[]).map(s=>`
 <div class="card">
-<img src="${s.Photo||''}" onerror="this.style.display='none'">
-<h3>${s.Name||''}</h3>
-<p>${s.Position||''}</p>
+<img src="${s.Photo||''}">
+<h3 class="staff-name">${s.Name||''}</h3>
+<p class="staff-post">${s.Position||''}</p>
 </div>`).join('');
 
-heads.innerHTML = headsData.map(h=>`
+document.getElementById("heads").innerHTML=
+(hd||[]).map(h=>`
 <div class="card">
-<img src="${h.Photo||''}" onerror="this.style.display='none'">
+<img src="${h.Photo||''}">
 <h3>${h.Name||''}</h3>
-<p>${h.Department||''}</p>
 </div>`).join('');
 }
 
