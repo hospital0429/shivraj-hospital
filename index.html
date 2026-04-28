@@ -35,10 +35,15 @@ img{width:100%;border-radius:8px;margin-top:10px;}
 <button onclick="loadData()">Search</button>
 </div>
 
+<div style="text-align:center;margin:10px;">
+<button onclick="printReport()">🖨️ Print Report</button>
+</div>
+
 <h3 style="text-align:center;color:#0d6efd;" id="reportTitle"></h3>
 
 <!-- DAILY -->
 <div class="grid">
+
 <div class="card"><h3>OPD</h3><div class="value" id="opd">0</div></div>
 <div class="card"><h3>Emergency</h3><div class="value" id="er">0</div></div>
 <div class="card"><h3>Lab</h3><div class="value" id="lab">0</div></div>
@@ -49,6 +54,7 @@ img{width:100%;border-radius:8px;margin-top:10px;}
 <div class="card"><h3>ECG</h3><div class="value" id="ecg">0</div></div>
 <div class="card"><h3>USG</h3><div class="value" id="usg">0</div></div>
 <div class="card"><h3>X-Ray</h3><div class="value" id="xray">0</div></div>
+
 </div>
 
 <!-- MONTHLY -->
@@ -57,6 +63,7 @@ img{width:100%;border-radius:8px;margin-top:10px;}
 <select id="monthSelect"></select>
 
 <div class="grid">
+
 <div class="card"><h3>OPD</h3><div id="m_opd">0</div></div>
 <div class="card"><h3>ER</h3><div id="m_er">0</div></div>
 <div class="card"><h3>Delivery</h3><div id="m_delivery">0</div></div>
@@ -67,6 +74,7 @@ img{width:100%;border-radius:8px;margin-top:10px;}
 <div class="card"><h3>ECG</h3><div id="m_ecg">0</div></div>
 <div class="card"><h3>USG</h3><div id="m_usg">0</div></div>
 <div class="card"><h3>X-Ray</h3><div id="m_xray">0</div></div>
+
 </div>
 
 <canvas id="chart"></canvas>
@@ -80,7 +88,7 @@ img{width:100%;border-radius:8px;margin-top:10px;}
 
 <!-- STAFF -->
 <div class="section">
-<h2>Staff Details</h2>
+<h2>Staff</h2>
 <div class="grid" id="staff"></div>
 </div>
 
@@ -103,73 +111,77 @@ img{width:100%;border-radius:8px;margin-top:10px;}
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 let allData=[], monthlyData=[];
 
-// DAILY
+// DAILY DATA
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
-.then(res=>res.json())
-.then(data=>{
-    allData=data;
+.then(r=>r.json())
+.then(d=>{
+    allData=d;
     loadLatest();
 });
 
+// TODAY AUTO
 document.getElementById("selectedDate").value=
 new Date().toISOString().split('T')[0];
 
 function loadLatest(){
     const d=allData[allData.length-1];
     showData(d);
-    document.getElementById("reportTitle").innerText="Today: "+d["Date"];
+    reportTitle.innerText="Today: "+d["Date"];
 }
 
+// SEARCH
 function loadData(){
-    const date=document.getElementById("selectedDate").value;
+    const date=selectedDate.value;
 
     const found=allData.find(d=>{
         const dt=new Date(d["Date"]);
         if(isNaN(dt)) return false;
+
         const f=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')+"-"+String(dt.getDate()).padStart(2,'0');
         return f===date;
     });
 
     if(found){
         showData(found);
-        document.getElementById("reportTitle").innerText="Date: "+date;
+        reportTitle.innerText="Date: "+date;
     } else alert("No report found");
 }
 
+// SHOW DATA
 function showData(d){
-    const m=Number(d["OPD Male"]||0), f=Number(d["OPD Female"]||0);
-    document.getElementById("opd").innerText=m+f+" (M:"+m+" F:"+f+")";
+
+    const m=+d["OPD Male"]||0, f=+d["OPD Female"]||0;
+    opd.innerText=m+f+" (M:"+m+" F:"+f+")";
 
     const r=+d["ER Red"]||0, y=+d["ER Yellow"]||0, g=+d["ER Green"]||0;
-    document.getElementById("er").innerText=(r+y+g)+" (R:"+r+" Y:"+y+" G:"+g+")";
+    er.innerText=(r+y+g)+" (R:"+r+" Y:"+y+" G:"+g+")";
 
-    document.getElementById("lab").innerText=d["Lab"]||0;
-    document.getElementById("pharmacy").innerText=d["Pharmacy"]||0;
-    document.getElementById("delivery").innerText=d["Delivery"]||0;
-    document.getElementById("anc").innerText=d["ANC"]||0;
+    lab.innerText=d["Lab"]||0;
+    pharmacy.innerText=d["Pharmacy"]||0;
+    delivery.innerText=d["Delivery"]||0;
+    anc.innerText=d["ANC"]||0;
 
-    document.getElementById("ecg").innerText=d["ECG"]||0;
-    document.getElementById("usg").innerText=d["USG"]||0;
-    document.getElementById("xray").innerText=d["X-Ray"]||0;
+    ecg.innerText=d["ECG"]||0;
+    usg.innerText=d["USG"]||0;
+    xray.innerText=d["X-Ray"]||0;
 }
 
-// MONTHLY
+// MONTHLY + GRAPH
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY DATA`)
-.then(res=>res.json())
-.then(data=>{
-    monthlyData=data;
+.then(r=>r.json())
+.then(d=>{
+    monthlyData=d;
 
-    let s=document.getElementById("monthSelect");
-    data.forEach(d=>s.innerHTML+=`<option>${d.Month}</option>`);
+    monthSelect.innerHTML="";
+    d.forEach(x=>monthSelect.innerHTML+=`<option>${x.Month}</option>`);
 
-    if(data.length>0) loadMonth(data[data.length-1].Month);
+    loadMonth(d[d.length-1].Month);
 
-    // GRAPH
-    new Chart(document.getElementById("chart"),{
+    new Chart(chart,{
         type:'line',
         data:{
-            labels:data.map(d=>d.Month),
-            datasets:[{label:'OPD',data:data.map(d=>+d.OPD||0),borderWidth:2}]
+            labels:d.map(x=>x.Month),
+            datasets:[{label:'OPD',data:d.map(x=>+x.OPD||0),borderWidth:2}]
         }
     });
 });
@@ -235,6 +247,29 @@ fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
     ${n.Image?`<img src="${n.Image}">`:""}
     </div>`).join('');
 });
+
+// PRINT
+function printReport(){
+
+    const w=window.open('','','width=900,height=600');
+
+    w.document.write(`
+    <h2>Shivraj Hospital Report</h2>
+    <p>${reportTitle.innerText}</p>
+    <hr>
+    <p>OPD: ${opd.innerText}</p>
+    <p>ER: ${er.innerText}</p>
+    <p>Lab: ${lab.innerText}</p>
+    <p>Pharmacy: ${pharmacy.innerText}</p>
+    <p>Delivery: ${delivery.innerText}</p>
+    <p>ANC: ${anc.innerText}</p>
+    <p>ECG: ${ecg.innerText}</p>
+    <p>USG: ${usg.innerText}</p>
+    <p>X-Ray: ${xray.innerText}</p>
+    `);
+
+    w.print();
+}
 
 </script>
 
