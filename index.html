@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS v31.3</title>
+<title>Shivraj Hospital MIS v31.5</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -40,16 +40,12 @@ button{background:#0d6efd;color:white;border:none;cursor:pointer;}
 background:white;padding:12px;border-radius:10px;margin-bottom:10px;
 }
 
-img{width:100%;border-radius:8px;}
-
 .doctor-name{color:red;font-weight:bold;}
 .staff-name{color:blue;font-weight:bold;}
 .staff-post{color:black;font-size:13px;}
 
 .footer{
-text-align:right;
-margin-top:15px;
-font-weight:bold;
+text-align:right;margin-top:15px;font-weight:bold;
 }
 
 @media print{
@@ -69,22 +65,21 @@ right:20px;
 
 <body>
 
-<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v31.3</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v31.5</div>
 
 <div class="container">
 
-<!-- FILTER -->
+<!-- FILTER (RESTORED RANGE SECTION HERE) -->
 <div class="no-print" style="text-align:center;">
 <input type="date" id="date">
-<button onclick="loadDaily()">Daily Load</button>
-<button onclick="printDaily()">Print Daily</button>
+<button onclick="loadDaily()">Load Daily</button>
+<button onclick="printDaily()">Print</button>
 
 <br><br>
 
 <input type="date" id="from">
 <input type="date" id="to">
 <button onclick="loadRange()">Range Report</button>
-<button onclick="window.print()">Print Range</button>
 </div>
 
 <!-- PRINT AREA -->
@@ -127,13 +122,19 @@ right:20px;
 <div class="grid" id="consult"></div>
 </div>
 
-<!-- DUTY ROSTER FIXED -->
+<!-- DUTY ROSTER (DATE PICKER MOVED HERE) -->
 <div class="section no-print">
-<h3>📅 Today's Duty Roster</h3>
+<h3>📅 Duty Roster</h3>
+
+<div style="margin-bottom:10px;">
+<input type="date" id="rosterDate">
+<button onclick="loadRoster()">View</button>
+</div>
+
 <div class="grid" id="roster"></div>
 </div>
 
-<!-- OTHER SECTIONS SAME -->
+<!-- OTHER MODULES -->
 <div class="section no-print">
 <h3>👨‍⚕️ Doctors</h3>
 <div class="grid" id="doctors"></div>
@@ -169,9 +170,14 @@ return await r.json();
 
 let daily=[];
 
+/* INIT */
 async function init(){
 daily=await get("DAILY DATA");
-date.value=new Date().toISOString().split("T")[0];
+
+let today=new Date().toISOString().split("T")[0];
+date.value=today;
+rosterDate.value=today;
+
 loadDaily();
 loadPeople();
 loadNotice();
@@ -190,18 +196,18 @@ setReport(d,"Daily Report - "+date.value);
 loadPie(d);
 }
 
-/* RANGE FIXED */
+/* RANGE REPORT */
 function loadRange(){
 
-let fromDate=new Date(from.value);
-let toDate=new Date(to.value);
+let f=new Date(from.value);
+let t=new Date(to.value);
 
 let arr=daily.filter(x=>{
 let d=new Date(x.Date);
-return d>=fromDate && d<=toDate;
+return d>=f && d<=t;
 });
 
-let s={opd:0,er:0,lab:0,pharmacy:0,xray:0,adm:0,dis:0,male:0,female:0};
+let s={opd:0,er:0,lab:0,pharmacy:0,xray:0,adm:0,dis:0};
 
 arr.forEach(x=>{
 s.opd+=(+x["OPD Male"]||0)+(+x["OPD Female"]||0);
@@ -225,13 +231,13 @@ OPD:s.opd,ER:s.er,Lab:s.lab,Pharmacy:s.pharmacy,
 },`Range Report (${from.value} to ${to.value})`);
 }
 
-/* ROSTER FIXED (FULL DATE MATCH) */
+/* ROSTER FIXED */
 async function loadRoster(){
 
 let r=await get("ROSTER");
-let today=date.value;
+let d=rosterDate.value;
 
-let filtered=(r||[]).filter(x=>x.Date === today);
+let filtered=(r||[]).filter(x=>x.Date===d);
 
 roster.innerHTML=filtered.map(x=>`
 <div class="card">
@@ -288,7 +294,6 @@ options:{animation:{animateScale:true}}
 
 /* CONSULTANT */
 async function loadConsult(){
-
 let c=await get("CONSULTANT");
 
 consult.innerHTML=(c||[]).map(x=>`
@@ -304,8 +309,9 @@ consult.innerHTML=(c||[]).map(x=>`
 `).join('');
 }
 
-/* OTHER MODULES SAME */
-async function loadPeople(){ /* unchanged */ 
+/* OTHER MODULES */
+async function loadPeople(){
+
 let doc=await get("DOCTORS");
 let stf=await get("STAFF");
 let hd=await get("HEADS");
@@ -333,8 +339,8 @@ heads.innerHTML=(hd||[]).map(h=>`
 `).join('');
 }
 
+/* NOTICE */
 async function loadNotice(){
-
 let n=await get("NOTICES");
 
 notice.innerHTML=(n||[]).map(x=>`
