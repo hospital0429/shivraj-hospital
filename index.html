@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS v32</title>
+<title>Shivraj Hospital MIS v32.2</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -46,7 +46,6 @@ img{width:100%;border-radius:8px;}
 .staff-name{color:blue;font-weight:bold;}
 .staff-post{color:black;font-size:13px;}
 
-/* PRINT FIX */
 @media print{
 body *{visibility:hidden;}
 #printArea,#printArea *{visibility:visible;}
@@ -58,13 +57,12 @@ body *{visibility:hidden;}
 
 <body>
 
-<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v32</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v32.2</div>
 
 <div class="container">
 
 <!-- FILTER -->
 <div class="no-print" style="text-align:center;">
-
 <input type="date" id="date">
 <button onclick="loadDaily()">Daily Load</button>
 <button onclick="printDaily()">Print Daily</button>
@@ -75,7 +73,6 @@ body *{visibility:hidden;}
 <input type="date" id="to">
 <button onclick="loadRange()">Range Report</button>
 <button onclick="printRange()">Print Range</button>
-
 </div>
 
 <!-- PRINT AREA -->
@@ -104,8 +101,7 @@ body *{visibility:hidden;}
 
 <br>
 
-<!-- FOOTER FIXED -->
-<div style="text-align:right;margin-top:20px;">
+<div style="text-align:right;">
 MEDICAL RECORDER __________
 </div>
 
@@ -123,14 +119,12 @@ MEDICAL RECORDER __________
 <div class="grid" id="consult"></div>
 </div>
 
-<!-- DUTY ROSTER FIXED -->
+<!-- DUTY ROSTER -->
 <div class="section no-print">
-<h3>📅 Duty Roster (Date Wise)</h3>
+<h3>📅 Duty Roster</h3>
 
-<div class="no-print">
 <input type="date" id="rosterDate">
-<button onclick="loadRoster()">Load Roster</button>
-</div>
+<button onclick="loadRoster()">Load</button>
 
 <div class="grid" id="roster"></div>
 </div>
@@ -173,18 +167,21 @@ return await r.json();
 }
 
 let daily=[];
+let pieChart=null;
 
 /* INIT */
 async function init(){
 daily=await get("DAILY DATA");
-date.value=new Date().toISOString().split("T")[0];
-rosterDate.value=date.value;
+
+let today=new Date().toISOString().split("T")[0];
+date.value=today;
+rosterDate.value=today;
 
 loadDaily();
-loadPeople();
-loadNotice();
 loadConsult();
 loadRoster();
+loadPeople();
+loadNotice();
 }
 init();
 
@@ -195,66 +192,18 @@ let d=daily.find(x=>x.Date && x.Date.includes(date.value));
 if(!d) return;
 
 setReport(d,"Daily Report - "+date.value);
-loadPie(d);
+renderPie(d);
 }
 
-/* PRINT DAILY ONLY FIX */
-function printDaily(){
-
-let d=daily.find(x=>x.Date && x.Date.includes(date.value));
-if(!d) return;
-
-setReport(d,"Daily Print - "+date.value);
-window.print();
-}
-
-/* RANGE PRINT FIX */
-function printRange(){
-
-loadRange();
-window.print();
-}
-
-/* RANGE */
-function loadRange(){
-
-let f=new Date(from.value);
-let t=new Date(to.value);
-
-let arr=daily.filter(x=>{
-let d=new Date(x.Date);
-return d>=f && d<=t;
-});
-
-let s={opd:0,er:0,lab:0,pharmacy:0,xray:0,adm:0,dis:0};
-
-arr.forEach(x=>{
-s.opd+=(+x["OPD Male"]||0)+(+x["OPD Female"]||0);
-s.er+=(+x["ER Red"]||0)+(+x["ER Yellow"]||0)+(+x["ER Green"]||0);
-s.lab+=+x.Lab||0;
-s.pharmacy+=+x.Pharmacy||0;
-s.xray+=+x["X-Ray"]||0;
-
-s.adm+=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
-s.dis+=(+x["Discharged Male"]||0)+(+x["Discharged Female"]||0);
-});
-
-setReport({
-OPD:s.opd,ER:s.er,Lab:s.lab,Pharmacy:s.pharmacy,
-"X-Ray":s.xray,
-"Admitted Male":s.adm/2,
-"Admitted Female":s.adm/2,
-"Discharged Male":s.dis/2,
-"Discharged Female":s.dis/2,
-"Total Beds":1
-},`Range Report (${from.value} to ${to.value})`);
-}
-
-/* REPORT */
+/* REPORT FIX */
 function setReport(d,titleText){
 
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
-er.innerText=d.ER||0;
+
+/* ER FIX */
+er.innerText=
+(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
+
 lab.innerText=d.Lab||0;
 pharmacy.innerText=d.Pharmacy||0;
 ecg.innerText=d.ECG||0;
@@ -268,19 +217,26 @@ let beds=+d["Total Beds"]||1;
 admitted.innerText=adm;
 discharged.innerText=dis;
 
+/* OCCUPANCY ALERT FIX */
 let occ=(adm/beds)*100;
 occupancy.innerText=occ.toFixed(1)+"%";
+
+if(occ<60) occupancy.style.color="green";
+else if(occ<85) occupancy.style.color="orange";
+else occupancy.style.color="red";
 
 title.innerText=titleText;
 }
 
-/* PIE */
-function loadPie(d){
+/* PIE FIX */
+function renderPie(d){
 
 let male=+d["OPD Male"]||0;
 let female=+d["OPD Female"]||0;
 
-new Chart(opdPie,{
+if(pieChart) pieChart.destroy();
+
+pieChart=new Chart(opdPie,{
 type:'pie',
 data:{
 labels:[`Male (${male})`,`Female (${female})`],
@@ -308,7 +264,7 @@ consult.innerHTML=(c||[]).map(x=>`
 `).join('');
 }
 
-/* ROSTER DATE WISE FIX */
+/* ROSTER FIX */
 async function loadRoster(){
 
 let r=await get("ROSTER");
@@ -326,7 +282,7 @@ roster.innerHTML=f.map(x=>`
 `).join('');
 }
 
-/* OTHER MODULES SAME */
+/* PEOPLE */
 async function loadPeople(){
 
 let doc=await get("DOCTORS");
@@ -369,6 +325,16 @@ notice.innerHTML=(n||[]).map(x=>`
 <a href="${x.PDF}" download>Download</a>
 </div>
 `).join('');
+}
+
+/* PRINT FIX */
+function printDaily(){
+window.print();
+}
+
+function printRange(){
+loadRange();
+window.print();
 }
 
 </script>
