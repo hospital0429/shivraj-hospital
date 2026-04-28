@@ -21,7 +21,11 @@ img{width:100%;border-radius:8px;margin-top:6px;}
 .view{background:#0d6efd;color:white;}
 .download{background:#28a745;color:white;}
 input,button,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
-button{background:#0d6efd;color:white;border:none;}
+button{background:#0d6efd;color:white;border:none;cursor:pointer;}
+
+.occ-green{background:#198754;color:white;padding:6px;border-radius:6px;}
+.occ-yellow{background:#ffc107;color:black;padding:6px;border-radius:6px;}
+.occ-red{background:#dc3545;color:white;padding:6px;border-radius:6px;}
 </style>
 </head>
 
@@ -29,21 +33,19 @@ button{background:#0d6efd;color:white;border:none;}
 
 <div class="header">
 Shivraj Hospital Dashboard
-<div>📅 <span id="nepaliDate"></span></div>
 <div>🕒 <span id="clock"></span></div>
 </div>
 
 <div class="container">
 
-<!-- DATE -->
 <div style="text-align:center;">
 <input type="date" id="selectedDate">
 <button onclick="loadData()">Search</button>
+<button onclick="printReport()">Print / PDF</button>
 </div>
 
 <h3 id="reportTitle"></h3>
 
-<!-- DAILY -->
 <div class="grid">
 <div class="card"><h3>OPD</h3><div id="opd" class="value">0</div></div>
 <div class="card"><h3>Emergency</h3><div id="er" class="value">0</div></div>
@@ -54,40 +56,43 @@ Shivraj Hospital Dashboard
 <div class="card"><h3>ECG</h3><div id="ecg" class="value">0</div></div>
 <div class="card"><h3>USG</h3><div id="usg" class="value">0</div></div>
 <div class="card"><h3>X-Ray</h3><div id="xray" class="value">0</div></div>
+
+<div class="card">
+<h3>Indoor Services</h3>
+<div>Total Admitted: <span id="admitted">0</span></div>
+<div>Male: <span id="admittedMale">0</span></div>
+<div>Female: <span id="admittedFemale">0</span></div>
+<div>Discharged: <span id="discharged">0</span></div>
 </div>
 
-<!-- MONTHLY GRAPH -->
+<div class="card">
+<h3>Bed Occupancy</h3>
+<div id="occupancy">0%</div>
+<div id="occMessage"></div>
+</div>
+
+</div>
+
 <div class="section">
 <h2>Monthly Comparative Graph</h2>
 <canvas id="chart"></canvas>
 </div>
 
-<!-- DOCTORS -->
 <div class="section">
-<h2>Doctors</h2>
-<div class="grid" id="doctors"></div>
+<h2>Bed Occupancy Trend</h2>
+<canvas id="occChart"></canvas>
 </div>
 
-<!-- STAFF -->
-<div class="section">
-<h2>Staff</h2>
-<div class="grid" id="staff"></div>
-</div>
+<div class="section"><h2>Doctors</h2><div class="grid" id="doctors"></div></div>
+<div class="section"><h2>Staff</h2><div class="grid" id="staff"></div></div>
+<div class="section"><h2>Department Heads</h2><div class="grid" id="heads"></div></div>
 
-<!-- HEADS -->
-<div class="section">
-<h2>Department Heads</h2>
-<div class="grid" id="heads"></div>
-</div>
-
-<!-- ROSTER -->
 <div class="section">
 <h2>Duty Roster</h2>
 <select id="rosterDate"></select>
 <div class="grid" id="rosterList"></div>
 </div>
 
-<!-- NOTICES -->
 <div class="section">
 <h2>Notices</h2>
 <div id="notices"></div>
@@ -113,23 +118,10 @@ clockEl.innerText=(h<10?"0"+h:h)+":"+(m<10?"0"+m:m)+":"+(s<10?"0"+s:s)+" "+p;
 let clockEl=document.getElementById("clock");
 setInterval(clock,1000);clock();
 
-/* NEPALI DATE (stable) */
-function nepDate(){
-let m=["Baisakh","Jestha","Ashadh","Shrawan","Bhadra","Asoj","Kartik","Mangsir","Poush","Magh","Falgun","Chaitra"];
-let d=new Date();
-return m[d.getMonth()]+" "+d.getDate()+", "+(d.getFullYear()+57);
-}
-document.getElementById("nepaliDate").innerText=nepDate();
-
 /* LOAD DAILY */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
-.then(r=>r.json())
-.then(d=>{
-allData=d||[];
-init();
-});
+.then(r=>r.json()).then(d=>{allData=d||[];init();});
 
-/* INIT */
 function init(){
 let t=new Date();
 let y=t.getFullYear();
@@ -139,10 +131,8 @@ selectedDate.value=y+"-"+m+"-"+d;
 loadData();
 }
 
-/* SEARCH */
 function loadData(){
 let sel=selectedDate.value;
-
 let f=allData.find(r=>{
 let dt=new Date(r.Date);
 if(isNaN(dt)) return false;
@@ -151,17 +141,12 @@ let m=String(dt.getMonth()+1).padStart(2,'0');
 let d=String(dt.getDate()).padStart(2,'0');
 return (y+"-"+m+"-"+d)===sel;
 });
-
-if(f){
-show(f);
-reportTitle.innerText="Report Date: "+sel;
-}else{
-alert("No data found");
-}
+if(f){show(f);reportTitle.innerText="Report Date: "+sel;}
+else{alert("No data found");}
 }
 
-/* SHOW */
 function show(d){
+
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
 er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
 lab.innerText=d.Lab||0;
@@ -171,6 +156,31 @@ anc.innerText=d.ANC||0;
 ecg.innerText=d.ECG||0;
 usg.innerText=d.USG||0;
 xray.innerText=d["X-Ray"]||0;
+
+/* indoor */
+let am=+d["Admitted Male"]||0;
+let af=+d["Admitted Female"]||0;
+admittedMale.innerText=am;
+admittedFemale.innerText=af;
+admitted.innerText=am+af;
+discharged.innerText=d["Discharged"]||0;
+
+/* occupancy */
+let beds=+d["Total Beds"]||0;
+let total=am+af;
+let occBox=document.getElementById("occupancy");
+let msg=document.getElementById("occMessage");
+
+if(beds>0){
+let occ=(total/beds)*100;
+occBox.innerText=occ.toFixed(1)+"%";
+
+occBox.classList.remove("occ-green","occ-yellow","occ-red");
+
+if(occ<=50){occBox.classList.add("occ-green");msg.innerText="Normal";}
+else if(occ<=80){occBox.classList.add("occ-yellow");msg.innerText="Beds Filling";}
+else{occBox.classList.add("occ-red");msg.innerText="⚠ Beds Full";}
+}else{occBox.innerText="N/A";msg.innerText="";}
 }
 
 /* GRAPH */
@@ -179,8 +189,7 @@ fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 .then(d=>{
 new Chart(chart,{
 type:'bar',
-data:{
-labels:d.map(x=>x.Month),
+data:{labels:d.map(x=>x.Month),
 datasets:[
 {label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'blue'},
 {label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'red'},
@@ -189,17 +198,39 @@ datasets:[
 {label:'ECG',data:d.map(x=>+x.ECG||0),backgroundColor:'purple'},
 {label:'USG',data:d.map(x=>+x.USG||0),backgroundColor:'cyan'},
 {label:'X-Ray',data:d.map(x=>+x["X-Ray"]||0),backgroundColor:'black'}
-]
-}
-});
+]}});
+
+/* occupancy trend */
+new Chart(occChart,{
+type:'line',
+data:{
+labels:d.map(x=>x.Month),
+datasets:[{
+label:'Occupancy %',
+data:d.map(x=>{
+let t=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
+let b=+x["Total Beds"]||0;
+return b?((t/b)*100).toFixed(1):0;
+}),
+borderColor:'red'
+}]
+}});
 });
 
-/* LOAD SECTIONS */
+/* PRINT */
+function printReport(){
+let content=document.body.innerHTML;
+let w=window.open("");
+w.document.write(content+"<br><br><div style='text-align:right'>MEDICAL RECORDER<br>__________</div>");
+w.print();
+}
+
+/* LOAD OTHER */
 function load(url,id){
 fetch(url).then(r=>r.json()).then(d=>{
 document.getElementById(id).innerHTML=(d||[]).map(x=>`
 <div class="card">
-<img src="${x.Photo||''}" onerror="this.style.display='none'">
+<img src="${x.Photo||''}">
 <h3>${x.Name||''}</h3>
 <p>${x.Department||x.Position||''}</p>
 </div>`).join('');
@@ -210,10 +241,8 @@ load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
 load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
 load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
 
-/* ROSTER */
 fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
-.then(r=>r.json())
-.then(d=>{
+.then(r=>r.json()).then(d=>{
 rosterData=d||[];
 let dates=[...new Set(d.map(x=>x.Date))];
 rosterDate.innerHTML=dates.map(x=>`<option>${x}</option>`).join('');
@@ -229,12 +258,11 @@ rosterList.innerHTML=f.map(x=>`
 <p>${x.Shift}</p>
 </div>`).join('');
 }
+
 rosterDate.onchange=()=>loadRoster(rosterDate.value);
 
-/* NOTICES */
 fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
-.then(r=>r.json())
-.then(d=>{
+.then(r=>r.json()).then(d=>{
 notices.innerHTML=(d||[]).map(n=>`
 <div class="notice-card">
 <h3>${n.Title}</h3>
