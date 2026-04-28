@@ -5,8 +5,6 @@
 <title>Shivraj Hospital Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- NEPALI DATE CONVERTER -->
 <script src="https://unpkg.com/nepali-date-converter/dist/index.min.js"></script>
 
 <style>
@@ -15,16 +13,16 @@ body{margin:0;font-family:'Segoe UI';background:#f0f6ff;}
 .header{
 background:#0d6efd;
 color:white;
-padding:18px;
+padding:15px;
 text-align:center;
 font-size:26px;
 }
 
 .container{padding:20px;}
 
-.dateBox{text-align:center;margin:15px;}
+.dateBox{text-align:center;margin:10px;}
 
-input,button{
+input,button,select{
 padding:8px;
 border-radius:6px;
 border:1px solid #ccc;
@@ -84,7 +82,18 @@ font-size:14px;
 
 <body>
 
-<div class="header">Shivraj Hospital Dashboard (BS Enabled)</div>
+<div class="header">
+Shivraj Hospital Dashboard
+
+<div style="font-size:14px;margin-top:5px;">
+📅 आजको मिति: <span id="nepaliDate"></span>
+</div>
+
+<div style="font-size:14px;">
+🕒 Time: <span id="clock"></span>
+</div>
+
+</div>
 
 <div class="container">
 
@@ -158,6 +167,13 @@ font-size:14px;
 <div class="grid" id="heads"></div>
 </div>
 
+<!-- ROSTER -->
+<div class="section">
+<h2>Doctor Duty Roster</h2>
+<select id="rosterDate"></select>
+<div class="grid" id="rosterList"></div>
+</div>
+
 <!-- NOTICES -->
 <div class="section">
 <h2>Notices</h2>
@@ -170,152 +186,160 @@ font-size:14px;
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
-let allData=[], monthlyData=[];
+let allData=[], monthlyData=[], rosterData=[];
 
-/* NEPALI DATE FUNCTION */
-function toBS(date){
-let d = new Date(date);
-let bs = NepaliDateConverter.ADToBS(d);
-return bs.year+"-"+String(bs.month).padStart(2,'0')+"-"+String(bs.day).padStart(2,'0');
+/* NEPALI DATE */
+function getBS(){
+let d=new Date();
+let bs=NepaliDateConverter.ADToBS(d);
+return bs.monthName+" "+bs.day+", "+bs.year;
 }
+document.getElementById("nepaliDate").innerText=getBS();
+
+/* CLOCK */
+function updateClock(){
+let now=new Date();
+let h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();
+let session="AM";
+if(h>=12)session="PM";
+if(h>12)h-=12;
+if(h===0)h=12;
+h=h<10?"0"+h:h;
+m=m<10?"0"+m:m;
+s=s<10?"0"+s:s;
+clock.innerText=h+":"+m+":"+s+" "+session;
+}
+setInterval(updateClock,1000);updateClock();
 
 /* DAILY */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
-.then(r=>r.json())
-.then(d=>{
-allData=d;
-loadLatest();
-});
+.then(r=>r.json()).then(d=>{allData=d;loadLatest();});
 
 selectedDate.value=new Date().toISOString().split('T')[0];
 
 function loadLatest(){
 let d=allData[allData.length-1];
 showData(d);
-reportTitle.innerText="Date (BS): "+toBS(d.Date);
+reportTitle.innerText="Latest Data";
 }
 
 function loadData(){
 let date=selectedDate.value;
-
 let found=allData.find(d=>{
 let dt=new Date(d.Date);
-if(isNaN(dt)) return false;
-
+if(isNaN(dt))return false;
 let f=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')+"-"+String(dt.getDate()).padStart(2,'0');
-
 return f===date;
 });
-
-if(found){
-showData(found);
-reportTitle.innerText="Date (BS): "+toBS(found.Date);
-}else alert("No data found");
+if(found)showData(found);
 }
 
 function showData(d){
-
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
-
-let r=+d["ER Red"]||0,y=+d["ER Yellow"]||0,g=+d["ER Green"]||0;
-er.innerText=r+y+g;
-
-lab.innerText=Number(d.Lab||0);
-pharmacy.innerText=Number(d.Pharmacy||0);
-delivery.innerText=Number(d.Delivery||0);
-anc.innerText=Number(d.ANC||0);
-
-ecg.innerText=Number(d.ECG||0);
-usg.innerText=Number(d.USG||0);
-xray.innerText=Number(d["X-Ray"]||0);
+er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
+lab.innerText=d.Lab||0;
+pharmacy.innerText=d.Pharmacy||0;
+delivery.innerText=d.Delivery||0;
+anc.innerText=d.ANC||0;
+ecg.innerText=d.ECG||0;
+usg.innerText=d.USG||0;
+xray.innerText=d["X-Ray"]||0;
 }
 
-/* MONTHLY + COMPARATIVE GRAPH */
+/* MONTHLY + GRAPH */
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
-.then(r=>r.json())
-.then(d=>{
-
+.then(r=>r.json()).then(d=>{
 monthlyData=d;
-
 monthSelect.innerHTML="";
-
 d.forEach(x=>{
 monthSelect.innerHTML+=`<option value="${x.Month}">${x.Month}</option>`;
 });
-
-loadMonth(d[d.length-1].Month);
+loadMonth(d[0].Month);
 
 new Chart(chart,{
 type:'bar',
 data:{
 labels:d.map(x=>x.Month),
-
 datasets:[
-
-{label:'OPD',data:d.map(x=>Number(x.OPD||0)),backgroundColor:'#0d6efd'},
-{label:'ER',data:d.map(x=>Number(x.ER||0)),backgroundColor:'#dc3545'},
-{label:'ANC',data:d.map(x=>Number(x.ANC||0)),backgroundColor:'#198754'},
-{label:'Delivery',data:d.map(x=>Number(x.Delivery||0)),backgroundColor:'#ffc107'},
-{label:'Lab',data:d.map(x=>Number(x.Lab||0)),backgroundColor:'#6f42c1'},
-{label:'Pharmacy',data:d.map(x=>Number(x.Pharmacy||0)),backgroundColor:'#20c997'},
-{label:'ECG',data:d.map(x=>Number(x.ECG||0)),backgroundColor:'#fd7e14'},
-{label:'USG',data:d.map(x=>Number(x.USG||0)),backgroundColor:'#0dcaf0'},
-{label:'X-Ray',data:d.map(x=>Number(x["X-Ray"]||0)),backgroundColor:'#343a40'}
-
+{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'#0d6efd'},
+{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'#dc3545'},
+{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'#198754'},
+{label:'Delivery',data:d.map(x=>+x.Delivery||0),backgroundColor:'#ffc107'},
+{label:'Lab',data:d.map(x=>+x.Lab||0),backgroundColor:'#6f42c1'},
+{label:'Pharmacy',data:d.map(x=>+x.Pharmacy||0),backgroundColor:'#20c997'},
+{label:'ECG',data:d.map(x=>+x.ECG||0),backgroundColor:'#fd7e14'},
+{label:'USG',data:d.map(x=>+x.USG||0),backgroundColor:'#0dcaf0'},
+{label:'X-Ray',data:d.map(x=>+x["X-Ray"]||0),backgroundColor:'#343a40'}
 ]
-
-},
-options:{
-responsive:true,
-plugins:{legend:{position:'top'}},
-scales:{y:{beginAtZero:true}}
 }
 });
-
 });
 
 function loadMonth(m){
-
 let d=monthlyData.find(x=>x.Month===m);
-if(!d) return;
-
-m_opd.innerText=Number(d.OPD||0);
-m_er.innerText=Number(d.ER||0);
-m_delivery.innerText=Number(d.Delivery||0);
-m_anc.innerText=Number(d.ANC||0);
-m_lab.innerText=Number(d.Lab||0);
-m_pharmacy.innerText=Number(d.Pharmacy||0);
-m_ecg.innerText=Number(d.ECG||0);
-m_usg.innerText=Number(d.USG||0);
-m_xray.innerText=Number(d["X-Ray"]||0);
+if(!d)return;
+m_opd.innerText=d.OPD||0;
+m_er.innerText=d.ER||0;
+m_delivery.innerText=d.Delivery||0;
+m_anc.innerText=d.ANC||0;
+m_lab.innerText=d.Lab||0;
+m_pharmacy.innerText=d.Pharmacy||0;
+m_ecg.innerText=d.ECG||0;
+m_usg.innerText=d.USG||0;
+m_xray.innerText=d["X-Ray"]||0;
 }
-
 monthSelect.onchange=()=>loadMonth(monthSelect.value);
 
+/* ROSTER */
+fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
+.then(r=>r.json()).then(d=>{
+rosterData=d;
+let dates=[...new Set(d.map(x=>x.Date))];
+rosterDate.innerHTML="";
+dates.forEach(dt=>{
+rosterDate.innerHTML+=`<option>${dt}</option>`;
+});
+loadRoster(dates[0]);
+});
+
+function loadRoster(date){
+let f=rosterData.filter(x=>x.Date===date);
+rosterList.innerHTML=f.map(x=>`
+<div class="card">
+<h3>${x.Doctor}</h3>
+<p>${x.Department}</p>
+<p>${x.Shift}</p>
+</div>
+`).join('');
+}
+rosterDate.onchange=()=>loadRoster(rosterDate.value);
+
 /* OTHER SECTIONS */
-fetch(`https://opensheet.elk.sh/${sheetID}/DOCTORS`).then(r=>r.json()).then(d=>{
-doctors.innerHTML=d.map(x=>`<div class="card"><img src="${x.Photo}"><h3>${x.Name}</h3><p>${x.Department}</p></div>`).join('');
+function load(url,id){
+fetch(url).then(r=>r.json()).then(d=>{
+document.getElementById(id).innerHTML=d.map(x=>`
+<div class="card">
+<img src="${x.Photo}">
+<h3>${x.Name}</h3>
+<p>${x.Department||x.Position}</p>
+</div>
+`).join('');
 });
+}
+load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
+load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
+load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
 
-fetch(`https://opensheet.elk.sh/${sheetID}/STAFF`).then(r=>r.json()).then(d=>{
-staff.innerHTML=d.map(x=>`<div class="card"><img src="${x.Photo}"><h3>${x.Name}</h3><p>${x.Position}</p></div>`).join('');
-});
-
-fetch(`https://opensheet.elk.sh/${sheetID}/HEADS`).then(r=>r.json()).then(d=>{
-heads.innerHTML=d.map(x=>`<div class="card"><img src="${x.Photo}"><h3>${x.Name}</h3><p>${x.Department}</p></div>`).join('');
-});
-
+/* NOTICES */
 fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`).then(r=>r.json()).then(d=>{
-d.sort((a,b)=>new Date(b.Date)-new Date(a.Date));
-
 notices.innerHTML=d.map(n=>`
 <div class="notice-card">
 <h3>${n.Title}</h3>
 <small>${n.Date}</small>
 <p>${n.Description}</p>
 <div class="notice-actions">
-<a class="notice-btn view" href="${n.PDF}" target="_blank">📄 Open</a>
-<a class="notice-btn download" href="${n.PDF}" download>⬇ Download</a>
+<a class="notice-btn view" href="${n.PDF}" target="_blank">Open</a>
+<a class="notice-btn download" href="${n.PDF}" download>Download</a>
 </div>
 </div>
 `).join('');
@@ -324,20 +348,7 @@ notices.innerHTML=d.map(n=>`
 /* PRINT */
 function printReport(){
 let w=window.open();
-w.document.write(`
-<h2>Shivraj Hospital Report</h2>
-<p>${reportTitle.innerText}</p>
-<hr>
-<p>OPD: ${opd.innerText}</p>
-<p>ER: ${er.innerText}</p>
-<p>Lab: ${lab.innerText}</p>
-<p>Pharmacy: ${pharmacy.innerText}</p>
-<p>Delivery: ${delivery.innerText}</p>
-<p>ANC: ${anc.innerText}</p>
-<p>ECG: ${ecg.innerText}</p>
-<p>USG: ${usg.innerText}</p>
-<p>X-Ray: ${xray.innerText}</p>
-`);
+w.document.write(`<h2>Hospital Report</h2><p>${reportTitle.innerText}</p>`);
 w.print();
 }
 
