@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Shivraj Hospital Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{margin:0;font-family:Segoe UI;background:#eef5ff;}
+
+.header{background:#0d6efd;color:white;text-align:center;padding:15px;font-size:22px;}
+
+.container{padding:20px;}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+
+.card{
+background:white;padding:12px;border-radius:10px;
+text-align:center;box-shadow:0 3px 8px rgba(0,0,0,0.1);
+}
+
+.card h3{margin:0;color:#0d6efd;}
+.value{font-size:18px;font-weight:bold;margin-top:5px;}
+
+.section{margin-top:25px;}
+
+input,button,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
+button{background:#0d6efd;color:white;border:none;cursor:pointer;}
+
+.notice-card{
+background:white;padding:12px;margin-bottom:10px;border-radius:10px;
+}
+
+.notice-btn{padding:6px 10px;border-radius:6px;text-decoration:none;margin-right:6px;}
+.view{background:#0d6efd;color:white;}
+.download{background:#28a745;color:white;}
+
+img{width:100%;border-radius:8px;margin-top:5px;}
+
+.occ-green{background:#198754;color:white;padding:6px;border-radius:6px;}
+.occ-yellow{background:#ffc107;color:black;padding:6px;border-radius:6px;}
+.occ-red{background:#dc3545;color:white;padding:6px;border-radius:6px;}
+
+@media print{
+body *{visibility:hidden;}
+#printArea,#printArea *{visibility:visible;}
+#printArea{position:absolute;left:0;top:0;width:100%;}
+.no-print{display:none !important;}
+}
+</style>
+</head>
+
+<body>
+
+<div class="header no-print">Shivraj Hospital Dashboard</div>
+
+<div class="container">
+
+<!-- FILTER -->
+<div class="no-print" style="text-align:center;">
+<input type="date" id="selectedDate">
+<button onclick="loadData()">Search</button>
+<button onclick="printReport()">Print</button>
+</div>
+
+<h3 id="reportTitle"></h3>
+
+<!-- PRINT AREA -->
+<div id="printArea">
+
+<div style="text-align:center;margin-bottom:20px;">
+<h2>SHIVRAJ HOSPITAL</h2>
+<h3 id="printDate">Daily Report</h3>
+<hr>
+</div>
+
+<div class="grid">
+
+<div class="card"><h3>OPD</h3><div id="opd" class="value">0</div></div>
+<div class="card"><h3>ER</h3><div id="er" class="value">0</div></div>
+<div class="card"><h3>Lab</h3><div id="lab" class="value">0</div></div>
+<div class="card"><h3>Pharmacy</h3><div id="pharmacy" class="value">0</div></div>
+<div class="card"><h3>Delivery</h3><div id="delivery" class="value">0</div></div>
+<div class="card"><h3>ANC</h3><div id="anc" class="value">0</div></div>
+
+<div class="card"><h3>ECG</h3><div id="ecg" class="value">0</div></div>
+<div class="card"><h3>USG</h3><div id="usg" class="value">0</div></div>
+<div class="card"><h3>X-Ray</h3><div id="xray" class="value">0</div></div>
+
+<div class="card">
+<h3>Indoor</h3>
+<div>Total: <span id="admitted">0</span></div>
+<div>Male: <span id="admittedMale">0</span></div>
+<div>Female: <span id="admittedFemale">0</span></div>
+<div>Discharged: <span id="discharged">0</span></div>
+</div>
+
+<div class="card">
+<h3>Occupancy</h3>
+<div id="occupancy">0%</div>
+<div id="occMessage"></div>
+</div>
+
+</div>
+
+<div style="margin-top:50px;text-align:right;">
+<b>MEDICAL RECORDER</b><br>__________
+</div>
+
+</div>
+
+<!-- GRAPHS -->
+<div class="section no-print">
+<h2>Monthly Comparative Graph</h2>
+<canvas id="chart"></canvas>
+</div>
+
+<div class="section no-print">
+<h2>Occupancy Trend</h2>
+<canvas id="occChart"></canvas>
+</div>
+
+<!-- DOCTORS -->
+<div class="section no-print">
+<h2>Doctors</h2>
+<div class="grid" id="doctors"></div>
+</div>
+
+<!-- STAFF -->
+<div class="section no-print">
+<h2>Staff</h2>
+<div class="grid" id="staff"></div>
+</div>
+
+<!-- HEADS -->
+<div class="section no-print">
+<h2>Department Heads</h2>
+<div class="grid" id="heads"></div>
+</div>
+
+<!-- ROSTER -->
+<div class="section no-print">
+<h2>Duty Roster</h2>
+<select id="rosterDate"></select>
+<div class="grid" id="rosterList"></div>
+</div>
+
+<!-- NOTICES -->
+<div class="section no-print">
+<h2>Notices</h2>
+<div id="notices"></div>
+</div>
+
+</div>
+
+<script>
+
+const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
+
+let allData=[], rosterData=[];
+
+/* DAILY LOAD */
+fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
+.then(r=>r.json())
+.then(d=>{allData=d||[];init();});
+
+/* INIT */
+function init(){
+let t=new Date();
+let y=t.getFullYear();
+let m=String(t.getMonth()+1).padStart(2,'0');
+let d=String(t.getDate()).padStart(2,'0');
+selectedDate.value=y+"-"+m+"-"+d;
+loadData();
+}
+
+/* SEARCH */
+function loadData(){
+
+let sel=selectedDate.value;
+
+let f=allData.find(r=>{
+let dt=new Date(r.Date);
+if(isNaN(dt)) return false;
+
+let y=dt.getFullYear();
+let m=String(dt.getMonth()+1).padStart(2,'0');
+let d=String(dt.getDate()).padStart(2,'0');
+
+return (y+"-"+m+"-"+d)===sel;
+});
+
+if(f){
+show(f);
+reportTitle.innerText="Report: "+sel;
+document.getElementById("printDate").innerText="Daily Report - "+sel;
+}
+else alert("No Data Found");
+}
+
+/* SHOW */
+function show(d){
+
+opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
+er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
+lab.innerText=d.Lab||0;
+pharmacy.innerText=d.Pharmacy||0;
+delivery.innerText=d.Delivery||0;
+anc.innerText=d.ANC||0;
+ecg.innerText=d.ECG||0;
+usg.innerText=d.USG||0;
+xray.innerText=d["X-Ray"]||0;
+
+let am=+d["Admitted Male"]||0;
+let af=+d["Admitted Female"]||0;
+
+admittedMale.innerText=am;
+admittedFemale.innerText=af;
+admitted.innerText=am+af;
+discharged.innerText=d["Discharged"]||0;
+
+/* OCCUPANCY */
+let beds=+d["Total Beds"]||0;
+let total=am+af;
+
+let occBox=document.getElementById("occupancy");
+let msg=document.getElementById("occMessage");
+
+if(beds){
+let occ=(total/beds)*100;
+occBox.innerText=occ.toFixed(1)+"%";
+
+occBox.classList.remove("occ-green","occ-yellow","occ-red");
+
+if(occ<=50){occBox.classList.add("occ-green");msg.innerText="Normal";}
+else if(occ<=80){occBox.classList.add("occ-yellow");msg.innerText="Filling";}
+else{occBox.classList.add("occ-red");msg.innerText="Full";}
+}
+}
+
+/* PRINT */
+function printReport(){window.print();}
+
+/* GRAPHS */
+fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
+.then(r=>r.json())
+.then(d=>{
+
+new Chart(chart,{
+type:'bar',
+data:{
+labels:d.map(x=>x.Month),
+datasets:[
+{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'blue'},
+{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'red'},
+{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'green'}
+]
+}
+});
+
+new Chart(occChart,{
+type:'line',
+data:{
+labels:d.map(x=>x.Month),
+datasets:[{
+label:'Occupancy %',
+data:d.map(x=>{
+let t=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
+let b=+x["Total Beds"]||0;
+return b?((t/b)*100).toFixed(1):0;
+}),
+borderColor:'red'
+}]
+}
+});
+
+});
+
+/* LOAD DOCTORS/STAFF/HEADS SAFE */
+function load(url,id){
+fetch(url)
+.then(r=>r.json())
+.then(d=>{
+document.getElementById(id).innerHTML=(d||[]).map(x=>`
+<div class="card">
+<img src="${x.Photo||''}" onerror="this.style.display='none'">
+<h3>${x.Name||''}</h3>
+<p>${x.Department||x.Position||''}</p>
+</div>`).join('');
+}).catch(()=>{});
+}
+
+load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
+load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
+load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
+
+/* ROSTER */
+fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
+.then(r=>r.json())
+.then(d=>{
+rosterData=d||[];
+let dates=[...new Set(d.map(x=>x.Date))];
+rosterDate.innerHTML=dates.map(x=>`<option>${x}</option>`).join('');
+});
+
+rosterDate.onchange=()=>{
+let f=rosterData.filter(x=>x.Date===rosterDate.value);
+rosterList.innerHTML=f.map(x=>`
+<div class="card">
+<h3>${x.Doctor}</h3>
+<p>${x.Department}</p>
+<p>${x.Shift}</p>
+</div>`).join('');
+};
+
+/* NOTICES */
+fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
+.then(r=>r.json())
+.then(d=>{
+notices.innerHTML=(d||[]).map(n=>`
+<div class="notice-card">
+<h3>${n.Title}</h3>
+<p>${n.Description}</p>
+<a class="notice-btn view" href="${n.PDF}" target="_blank">Open</a>
+<a class="notice-btn download" href="${n.PDF}" download>Download</a>
+</div>`).join('');
+});
+
+</script>
+
+</body>
+</html>
