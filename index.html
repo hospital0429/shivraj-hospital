@@ -2,132 +2,170 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS FINAL</title>
+<title>Shivraj Hospital MIS System</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#eef5ff;}
+body{margin:0;font-family:Segoe UI;background:#eef5ff;}
 
-.header{
-background:#0d6efd;color:white;text-align:center;
-padding:14px;font-size:20px;
-}
+.header{background:#0d6efd;color:white;text-align:center;padding:15px;font-size:22px;}
 
-.container{padding:18px;}
+.container{padding:20px;}
 
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-gap:12px;
-}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
 
 .card{
 background:white;padding:12px;border-radius:10px;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
-text-align:center;
+text-align:center;box-shadow:0 3px 8px rgba(0,0,0,0.1);
 }
 
-.section{margin-top:20px;}
+.card h3{margin:0;color:#0d6efd;}
+.value{font-size:18px;font-weight:bold;margin-top:5px;}
 
-input,button{
-padding:8px;border-radius:6px;border:1px solid #ccc;
+.section{margin-top:25px;}
+
+input,button,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
+button{background:#0d6efd;color:white;border:none;cursor:pointer;}
+
+.notice-card{
+background:white;padding:12px;margin-bottom:10px;border-radius:10px;
 }
 
-button{
-background:#0d6efd;color:white;border:none;cursor:pointer;
-}
+.notice-btn{padding:6px 10px;border-radius:6px;text-decoration:none;margin-right:6px;}
+.view{background:#0d6efd;color:white;}
+.download{background:#28a745;color:white;}
 
-img{width:100%;border-radius:8px;}
+img{width:100%;border-radius:8px;margin-top:5px;}
 
-.no-print{}
+.occ-green{background:#198754;color:white;padding:6px;border-radius:6px;}
+.occ-yellow{background:#ffc107;color:black;padding:6px;border-radius:6px;}
+.occ-red{background:#dc3545;color:white;padding:6px;border-radius:6px;}
 
 @media print{
 body *{visibility:hidden;}
 #printArea,#printArea *{visibility:visible;}
-#printArea{position:absolute;top:0;left:0;width:100%;}
-.no-print{display:none;}
+#printArea{position:absolute;left:0;top:0;width:100%;}
+.no-print{display:none !important;}
 }
 </style>
 </head>
 
 <body>
 
-<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM</div>
+<div class="header no-print">Shivraj Hospital MIS Dashboard</div>
 
 <div class="container">
 
-<!-- DATE -->
+<!-- FILTER -->
 <div class="no-print" style="text-align:center;">
-<input type="date" id="date">
-<button onclick="loadDaily()">Load</button>
-<button onclick="window.print()">Print</button>
+<input type="date" id="selectedDate">
+<button onclick="loadData()">Search</button>
+<button onclick="printReport()">Print</button>
 </div>
 
-<!-- RANGE -->
+<h3 id="reportTitle"></h3>
+
+<!-- RANGE REPORT -->
 <div class="no-print" style="text-align:center;margin-top:10px;">
-<input type="date" id="from">
-<input type="date" id="to">
-<button onclick="range()">Range</button>
+<h3>📊 Range Report</h3>
+<input type="date" id="fromDate">
+<input type="date" id="toDate">
+<button onclick="generateRangeReport()">Generate</button>
 </div>
 
-<div id="rangeBox"></div>
+<div id="rangeReport"></div>
 
 <!-- PRINT AREA -->
 <div id="printArea">
 
-<h2 style="text-align:center;">SHIVRAJ HOSPITAL</h2>
-<h3 id="title"></h3>
-
+<div style="text-align:center;margin-bottom:20px;">
+<h2>SHIVRAJ HOSPITAL</h2>
+<h3 id="printDate">Daily Report</h3>
 <hr>
+</div>
 
 <div class="grid">
 
-<div class="card">OPD<br><b id="opd">0</b></div>
-<div class="card">ER<br><b id="er">0</b></div>
-<div class="card">Lab<br><b id="lab">0</b></div>
-<div class="card">Pharmacy<br><b id="pharmacy">0</b></div>
-<div class="card">ECG<br><b id="ecg">0</b></div>
-<div class="card">USG<br><b id="usg">0</b></div>
-<div class="card">Indoor<br><b id="indoor">0</b></div>
+<div class="card"><h3>OPD</h3><div id="opd" class="value">0</div></div>
+<div class="card"><h3>ER</h3><div id="er" class="value">0</div></div>
+<div class="card"><h3>Lab</h3><div id="lab" class="value">0</div></div>
+<div class="card"><h3>Pharmacy</h3><div id="pharmacy" class="value">0</div></div>
+<div class="card"><h3>Delivery</h3><div id="delivery" class="value">0</div></div>
+<div class="card"><h3>ANC</h3><div id="anc" class="value">0</div></div>
 
+<div class="card"><h3>ECG</h3><div id="ecg" class="value">0</div></div>
+<div class="card"><h3>USG</h3><div id="usg" class="value">0</div></div>
+<div class="card"><h3>X-Ray</h3><div id="xray" class="value">0</div></div>
+
+<div class="card">
+<h3>Indoor</h3>
+<div>Total: <span id="admitted">0</span></div>
+<div>Male: <span id="admittedMale">0</span></div>
+<div>Female: <span id="admittedFemale">0</span></div>
+<div>Discharged: <span id="discharged">0</span></div>
+</div>
+
+<div class="card">
+<h3>Occupancy</h3>
+<div id="occupancy">0%</div>
+<div id="occMessage"></div>
+</div>
+
+</div>
+
+<div style="margin-top:50px;text-align:right;">
+<b>MEDICAL RECORDER</b><br>__________
 </div>
 
 </div>
 
 <!-- GRAPH -->
 <div class="section no-print">
-<h3>Monthly Graph</h3>
-<canvas id="bar"></canvas>
+<h2>Monthly Graph</h2>
+<canvas id="chart"></canvas>
 </div>
 
 <div class="section no-print">
-<h3>Trend</h3>
-<canvas id="line"></canvas>
+<h2>Occupancy Trend</h2>
+<canvas id="occChart"></canvas>
 </div>
 
-<!-- CONSULTANT -->
+<!-- DEPARTMENTS -->
 <div class="section no-print">
-<h3>🩺 Consultant (Monday)</h3>
-<div class="grid" id="consult"></div>
+<h2>Departments</h2>
+<div class="grid">
+<div class="card"><h3>Ortho</h3><div id="ortho" class="value">0</div></div>
+<div class="card"><h3>ENT</h3><div id="ent" class="value">0</div></div>
+<div class="card"><h3>Pedia</h3><div id="pedia" class="value">0</div></div>
+<div class="card"><h3>Derma</h3><div id="derma" class="value">0</div></div>
+<div class="card"><h3>Gyne</h3><div id="gyne" class="value">0</div></div>
+<div class="card"><h3>Psych</h3><div id="psy" class="value">0</div></div>
+</div>
 </div>
 
-<!-- DOCTORS -->
+<!-- DOCTORS / STAFF / HEADS -->
+<div class="section no-print"><h2>Doctors</h2><div class="grid" id="doctors"></div></div>
+<div class="section no-print"><h2>Staff</h2><div class="grid" id="staff"></div></div>
+<div class="section no-print"><h2>Heads</h2><div class="grid" id="heads"></div></div>
+
+<!-- MONDAY CONSULTANT -->
 <div class="section no-print">
-<h3>Doctors</h3>
-<div class="grid" id="doctors"></div>
+<h2>🩺 Monday Consultant Schedule</h2>
+<div class="grid" id="mondayDoctors"></div>
 </div>
 
-<!-- STAFF -->
+<!-- ROSTER -->
 <div class="section no-print">
-<h3>Staff</h3>
-<div class="grid" id="staff"></div>
+<h2>Duty Roster</h2>
+<select id="rosterDate"></select>
+<div class="grid" id="rosterList"></div>
 </div>
 
-<!-- HEADS -->
+<!-- NOTICES -->
 <div class="section no-print">
-<h3>Heads</h3>
-<div class="grid" id="heads"></div>
+<h2>Notices</h2>
+<div id="notices"></div>
 </div>
 
 </div>
@@ -136,166 +174,136 @@ body *{visibility:hidden;}
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
-/* SAFE FETCH ONLY */
-async function get(sheet){
-try{
-let r=await fetch(`https://opensheet.elk.sh/${sheetID}/${sheet}`);
-return await r.json();
-}catch(e){return [];}
-}
-
-let daily=[], monthly=[], consult=[];
-
-/* INIT ALL IN ORDER */
-async function init(){
-
-daily = await get("DAILY DATA");
-monthly = await get("MONTHLY DATA");
-consult = await get("CONSULTANT_SCHEDULE");
-
-loadDaily();
-graph();
-consultLoad();
-doctorLoad();
-staffLoad();
-headLoad();
-
-date.value=new Date().toISOString().split("T")[0];
-}
-
-init();
+let allData=[],rosterData=[];
 
 /* DAILY */
-function loadDaily(){
+fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
+.then(r=>r.json())
+.then(d=>{allData=d||[];init();});
 
-let d=daily.find(x=>x.Date && x.Date.includes(date.value));
-if(!d) return;
+function init(){
+let t=new Date();
+selectedDate.value=t.toISOString().split("T")[0];
+loadData();
+}
+
+/* SEARCH */
+function loadData(){
+
+let sel=selectedDate.value;
+
+let f=allData.find(r=>{
+let dt=new Date(r.Date);
+return dt.toISOString().split("T")[0]===sel;
+});
+
+if(f){
+show(f);
+document.getElementById("printDate").innerText="Daily Report - "+sel;
+}
+}
+
+/* SHOW */
+function show(d){
 
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
 er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
 lab.innerText=d.Lab||0;
 pharmacy.innerText=d.Pharmacy||0;
+delivery.innerText=d.Delivery||0;
+anc.innerText=d.ANC||0;
 ecg.innerText=d.ECG||0;
 usg.innerText=d.USG||0;
-indoor.innerText=(+d["Admitted Male"]||0)+(+d["Admitted Female"]||0);
+xray.innerText=d["X-Ray"]||0;
 
-title.innerText="Daily Report - "+date.value;
+let am=+d["Admitted Male"]||0;
+let af=+d["Admitted Female"]||0;
+
+admittedMale.innerText=am;
+admittedFemale.innerText=af;
+admitted.innerText=am+af;
+discharged.innerText=d["Discharged"]||0;
+
+/* DEPTS */
+ortho.innerText=d.Ortho||0;
+ent.innerText=d.ENT||0;
+pedia.innerText=d.Pedia||0;
+derma.innerText=d.Derma||0;
+gyne.innerText=d.Gyne||0;
+psy.innerText=d.Psychiatric||0;
+
+/* OCC */
+let beds=+d["Total Beds"]||0;
+let occ=(beds?(am+af)/beds*100:0);
+occupancy.innerText=occ.toFixed(1)+"%";
 }
 
-/* RANGE */
-function range(){
+/* PRINT */
+function printReport(){window.print();}
 
-let f=new Date(from.value);
-let t=new Date(to.value);
-
-let arr=daily.filter(x=>{
-let d=new Date(x.Date);
-return d>=f && d<=t;
-});
-
-let s={opd:0,er:0,lab:0,pharmacy:0,ecg:0,usg:0,indoor:0};
-
-arr.forEach(x=>{
-s.opd+=(+x["OPD Male"]||0)+(+x["OPD Female"]||0);
-s.er+=(+x["ER Red"]||0)+(+x["ER Yellow"]||0)+(+x["ER Green"]||0);
-s.lab+=+x.Lab||0;
-s.pharmacy+=+x.Pharmacy||0;
-s.ecg+=+x.ECG||0;
-s.usg+=+x.USG||0;
-s.indoor+=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
-});
-
-rangeBox.innerHTML=`
+/* LOAD SHEETS */
+function load(url,id){
+fetch(url).then(r=>r.json()).then(d=>{
+document.getElementById(id).innerHTML=(d||[]).map(x=>`
 <div class="card">
-<h3>Range Report</h3>
-<p>OPD ${s.opd}</p>
-<p>ER ${s.er}</p>
-<p>Lab ${s.lab}</p>
-<p>Indoor ${s.indoor}</p>
-</div>`;
+<img src="${x.Photo||''}" onerror="this.style.display='none'">
+<h3>${x.Name||''}</h3>
+<p>${x.Department||x.Position||''}</p>
+</div>`).join('');
+});
 }
 
-/* GRAPH */
-function graph(){
+load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
+load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
+load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
 
-new Chart(bar,{
-type:'bar',
-data:{
-labels:monthly.map(x=>x.Month),
-datasets:[
-{label:'OPD',data:monthly.map(x=>+x.OPD||0),backgroundColor:'blue'},
-{label:'ER',data:monthly.map(x=>+x.ER||0),backgroundColor:'red'}
-]
-}
+/* NOTICES */
+fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
+.then(r=>r.json())
+.then(d=>{
+notices.innerHTML=(d||[]).map(n=>`
+<div class="notice-card">
+<h3>${n.Title}</h3>
+<p>${n.Description}</p>
+<a class="notice-btn view" href="${n.PDF}" target="_blank">Open</a>
+<a class="notice-btn download" href="${n.PDF}" download>Download</a>
+</div>`).join('');
 });
 
-new Chart(line,{
-type:'line',
-data:{
-labels:monthly.map(x=>x.Month),
-datasets:[{
-label:'Trend',
-data:monthly.map(x=>{
-let t=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
-let b=+x["Total Beds"]||1;
-return (t/b*100).toFixed(1);
-}),
-borderColor:'orange'
-}]
-}
-});
-
-}
-
-/* CONSULTANT */
-function consultLoad(){
-
+/* MONDAY CONSULTANT */
+fetch(`https://opensheet.elk.sh/${sheetID}/CONSULTANT_SCHEDULE`)
+.then(r=>r.json())
+.then(d=>{
 let today=new Date();
-today.setDate(today.getDate()-today.getDay()+1);
-let mon=today.toISOString().split("T")[0];
+let monday=new Date(today.setDate(today.getDate()-today.getDay()+1));
+let ms=monday.toISOString().split("T")[0];
 
-let list=consult.filter(x=>x.Date===mon);
+let list=d.filter(x=>x.Date===ms);
 
-consult.innerHTML=list.map(x=>`
+mondayDoctors.innerHTML=list.map(x=>`
 <div class="card">
 <h3>${x.Department}</h3>
 <p>${x.Doctor}</p>
-</div>
-`).join('');
-}
-
-/* DOCTORS */
-function doctorLoad(){
-get("DOCTORS").then(d=>{
-doctors.innerHTML=d.map(x=>`
-<div class="card">
-<img src="${x.Photo||''}">
-<h3>${x.Name}</h3>
 </div>`).join('');
 });
-}
 
-/* STAFF */
-function staffLoad(){
-get("STAFF").then(d=>{
-staff.innerHTML=d.map(x=>`
-<div class="card">
-<img src="${x.Photo||''}">
-<h3>${x.Name}</h3>
-</div>`).join('');
+/* ROSTER */
+fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
+.then(r=>r.json())
+.then(d=>{
+rosterData=d;
+rosterDate.innerHTML=[...new Set(d.map(x=>x.Date))].map(x=>`<option>${x}</option>`).join('');
 });
-}
 
-/* HEADS */
-function headLoad(){
-get("HEADS").then(d=>{
-heads.innerHTML=d.map(x=>`
+rosterDate.onchange=()=>{
+rosterList.innerHTML=rosterData.filter(x=>x.Date===rosterDate.value)
+.map(x=>`
 <div class="card">
-<img src="${x.Photo||''}">
-<h3>${x.Name}</h3>
+<h3>${x.Doctor}</h3>
+<p>${x.Department}</p>
+<p>${x.Shift}</p>
 </div>`).join('');
-});
-}
+};
 
 </script>
 
