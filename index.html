@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital Dashboard</title>
+<title>Shivraj Hospital MIS System</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -13,7 +13,7 @@ body{margin:0;font-family:Segoe UI;background:#eef5ff;}
 
 .container{padding:20px;}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
 
 .card{
 background:white;padding:12px;border-radius:10px;
@@ -53,7 +53,7 @@ body *{visibility:hidden;}
 
 <body>
 
-<div class="header no-print">Shivraj Hospital Dashboard</div>
+<div class="header no-print">Shivraj Hospital MIS Dashboard</div>
 
 <div class="container">
 
@@ -65,6 +65,16 @@ body *{visibility:hidden;}
 </div>
 
 <h3 id="reportTitle"></h3>
+
+<!-- RANGE REPORT -->
+<div class="no-print" style="text-align:center;margin-top:10px;">
+<h3>📊 Range Report</h3>
+<input type="date" id="fromDate">
+<input type="date" id="toDate">
+<button onclick="generateRangeReport()">Generate</button>
+</div>
+
+<div id="rangeReport"></div>
 
 <!-- PRINT AREA -->
 <div id="printArea">
@@ -110,9 +120,9 @@ body *{visibility:hidden;}
 
 </div>
 
-<!-- GRAPHS -->
+<!-- GRAPH -->
 <div class="section no-print">
-<h2>Monthly Comparative Graph</h2>
+<h2>Monthly Graph</h2>
 <canvas id="chart"></canvas>
 </div>
 
@@ -121,22 +131,28 @@ body *{visibility:hidden;}
 <canvas id="occChart"></canvas>
 </div>
 
-<!-- DOCTORS -->
+<!-- DEPARTMENTS -->
 <div class="section no-print">
-<h2>Doctors</h2>
-<div class="grid" id="doctors"></div>
+<h2>Departments</h2>
+<div class="grid">
+<div class="card"><h3>Ortho</h3><div id="ortho" class="value">0</div></div>
+<div class="card"><h3>ENT</h3><div id="ent" class="value">0</div></div>
+<div class="card"><h3>Pedia</h3><div id="pedia" class="value">0</div></div>
+<div class="card"><h3>Derma</h3><div id="derma" class="value">0</div></div>
+<div class="card"><h3>Gyne</h3><div id="gyne" class="value">0</div></div>
+<div class="card"><h3>Psych</h3><div id="psy" class="value">0</div></div>
+</div>
 </div>
 
-<!-- STAFF -->
-<div class="section no-print">
-<h2>Staff</h2>
-<div class="grid" id="staff"></div>
-</div>
+<!-- DOCTORS / STAFF / HEADS -->
+<div class="section no-print"><h2>Doctors</h2><div class="grid" id="doctors"></div></div>
+<div class="section no-print"><h2>Staff</h2><div class="grid" id="staff"></div></div>
+<div class="section no-print"><h2>Heads</h2><div class="grid" id="heads"></div></div>
 
-<!-- HEADS -->
+<!-- MONDAY CONSULTANT -->
 <div class="section no-print">
-<h2>Department Heads</h2>
-<div class="grid" id="heads"></div>
+<h2>🩺 Monday Consultant Schedule</h2>
+<div class="grid" id="mondayDoctors"></div>
 </div>
 
 <!-- ROSTER -->
@@ -158,20 +174,16 @@ body *{visibility:hidden;}
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
-let allData=[], rosterData=[];
+let allData=[],rosterData=[];
 
-/* DAILY LOAD */
+/* DAILY */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
 .then(r=>r.json())
 .then(d=>{allData=d||[];init();});
 
-/* INIT */
 function init(){
 let t=new Date();
-let y=t.getFullYear();
-let m=String(t.getMonth()+1).padStart(2,'0');
-let d=String(t.getDate()).padStart(2,'0');
-selectedDate.value=y+"-"+m+"-"+d;
+selectedDate.value=t.toISOString().split("T")[0];
 loadData();
 }
 
@@ -182,21 +194,13 @@ let sel=selectedDate.value;
 
 let f=allData.find(r=>{
 let dt=new Date(r.Date);
-if(isNaN(dt)) return false;
-
-let y=dt.getFullYear();
-let m=String(dt.getMonth()+1).padStart(2,'0');
-let d=String(dt.getDate()).padStart(2,'0');
-
-return (y+"-"+m+"-"+d)===sel;
+return dt.toISOString().split("T")[0]===sel;
 });
 
 if(f){
 show(f);
-reportTitle.innerText="Report: "+sel;
 document.getElementById("printDate").innerText="Daily Report - "+sel;
 }
-else alert("No Data Found");
 }
 
 /* SHOW */
@@ -220,99 +224,38 @@ admittedFemale.innerText=af;
 admitted.innerText=am+af;
 discharged.innerText=d["Discharged"]||0;
 
-/* OCCUPANCY */
+/* DEPTS */
+ortho.innerText=d.Ortho||0;
+ent.innerText=d.ENT||0;
+pedia.innerText=d.Pedia||0;
+derma.innerText=d.Derma||0;
+gyne.innerText=d.Gyne||0;
+psy.innerText=d.Psychiatric||0;
+
+/* OCC */
 let beds=+d["Total Beds"]||0;
-let total=am+af;
-
-let occBox=document.getElementById("occupancy");
-let msg=document.getElementById("occMessage");
-
-if(beds){
-let occ=(total/beds)*100;
-occBox.innerText=occ.toFixed(1)+"%";
-
-occBox.classList.remove("occ-green","occ-yellow","occ-red");
-
-if(occ<=50){occBox.classList.add("occ-green");msg.innerText="Normal";}
-else if(occ<=80){occBox.classList.add("occ-yellow");msg.innerText="Filling";}
-else{occBox.classList.add("occ-red");msg.innerText="Full";}
-}
+let occ=(beds?(am+af)/beds*100:0);
+occupancy.innerText=occ.toFixed(1)+"%";
 }
 
 /* PRINT */
 function printReport(){window.print();}
 
-/* GRAPHS */
-fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
-.then(r=>r.json())
-.then(d=>{
-
-new Chart(chart,{
-type:'bar',
-data:{
-labels:d.map(x=>x.Month),
-datasets:[
-{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'blue'},
-{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'red'},
-{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'green'}
-]
-}
-});
-
-new Chart(occChart,{
-type:'line',
-data:{
-labels:d.map(x=>x.Month),
-datasets:[{
-label:'Occupancy %',
-data:d.map(x=>{
-let t=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
-let b=+x["Total Beds"]||0;
-return b?((t/b)*100).toFixed(1):0;
-}),
-borderColor:'red'
-}]
-}
-});
-
-});
-
-/* LOAD DOCTORS/STAFF/HEADS SAFE */
+/* LOAD SHEETS */
 function load(url,id){
-fetch(url)
-.then(r=>r.json())
-.then(d=>{
+fetch(url).then(r=>r.json()).then(d=>{
 document.getElementById(id).innerHTML=(d||[]).map(x=>`
 <div class="card">
 <img src="${x.Photo||''}" onerror="this.style.display='none'">
 <h3>${x.Name||''}</h3>
 <p>${x.Department||x.Position||''}</p>
 </div>`).join('');
-}).catch(()=>{});
+});
 }
 
 load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
 load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
 load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
-
-/* ROSTER */
-fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
-.then(r=>r.json())
-.then(d=>{
-rosterData=d||[];
-let dates=[...new Set(d.map(x=>x.Date))];
-rosterDate.innerHTML=dates.map(x=>`<option>${x}</option>`).join('');
-});
-
-rosterDate.onchange=()=>{
-let f=rosterData.filter(x=>x.Date===rosterDate.value);
-rosterList.innerHTML=f.map(x=>`
-<div class="card">
-<h3>${x.Doctor}</h3>
-<p>${x.Department}</p>
-<p>${x.Shift}</p>
-</div>`).join('');
-};
 
 /* NOTICES */
 fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
@@ -326,6 +269,41 @@ notices.innerHTML=(d||[]).map(n=>`
 <a class="notice-btn download" href="${n.PDF}" download>Download</a>
 </div>`).join('');
 });
+
+/* MONDAY CONSULTANT */
+fetch(`https://opensheet.elk.sh/${sheetID}/CONSULTANT_SCHEDULE`)
+.then(r=>r.json())
+.then(d=>{
+let today=new Date();
+let monday=new Date(today.setDate(today.getDate()-today.getDay()+1));
+let ms=monday.toISOString().split("T")[0];
+
+let list=d.filter(x=>x.Date===ms);
+
+mondayDoctors.innerHTML=list.map(x=>`
+<div class="card">
+<h3>${x.Department}</h3>
+<p>${x.Doctor}</p>
+</div>`).join('');
+});
+
+/* ROSTER */
+fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
+.then(r=>r.json())
+.then(d=>{
+rosterData=d;
+rosterDate.innerHTML=[...new Set(d.map(x=>x.Date))].map(x=>`<option>${x}</option>`).join('');
+});
+
+rosterDate.onchange=()=>{
+rosterList.innerHTML=rosterData.filter(x=>x.Date===rosterDate.value)
+.map(x=>`
+<div class="card">
+<h3>${x.Doctor}</h3>
+<p>${x.Department}</p>
+<p>${x.Shift}</p>
+</div>`).join('');
+};
 
 </script>
 
