@@ -5,7 +5,6 @@
 <title>Shivraj Hospital Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://unpkg.com/nepali-date-converter/dist/index.min.js"></script>
 
 <style>
 body{margin:0;font-family:Segoe UI;background:#eef5ff;}
@@ -16,7 +15,12 @@ body{margin:0;font-family:Segoe UI;background:#eef5ff;}
 .card h3{margin:0;color:#0d6efd;}
 .value{font-size:18px;font-weight:bold;margin-top:5px;}
 .section{margin-top:25px;}
-input,button{padding:8px;border-radius:6px;border:1px solid #ccc;}
+img{width:100%;border-radius:8px;margin-top:6px;}
+.notice-card{background:white;padding:12px;margin-bottom:10px;border-radius:10px;}
+.notice-btn{padding:6px 10px;border-radius:6px;text-decoration:none;margin-right:6px;}
+.view{background:#0d6efd;color:white;}
+.download{background:#28a745;color:white;}
+input,button,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
 button{background:#0d6efd;color:white;border:none;}
 </style>
 </head>
@@ -25,19 +29,21 @@ button{background:#0d6efd;color:white;border:none;}
 
 <div class="header">
 Shivraj Hospital Dashboard
-<div>📅 आजको मिति: <span id="todayBS"></span></div>
+<div>📅 <span id="nepaliDate"></span></div>
 <div>🕒 <span id="clock"></span></div>
 </div>
 
 <div class="container">
 
-<div style="text-align:center;margin-bottom:10px;">
-<input type="date" id="datePicker">
-<button onclick="searchData()">Search</button>
+<!-- DATE -->
+<div style="text-align:center;">
+<input type="date" id="selectedDate">
+<button onclick="loadData()">Search</button>
 </div>
 
 <h3 id="reportTitle"></h3>
 
+<!-- DAILY -->
 <div class="grid">
 <div class="card"><h3>OPD</h3><div id="opd" class="value">0</div></div>
 <div class="card"><h3>Emergency</h3><div id="er" class="value">0</div></div>
@@ -45,11 +51,46 @@ Shivraj Hospital Dashboard
 <div class="card"><h3>Pharmacy</h3><div id="pharmacy" class="value">0</div></div>
 <div class="card"><h3>Delivery</h3><div id="delivery" class="value">0</div></div>
 <div class="card"><h3>ANC</h3><div id="anc" class="value">0</div></div>
+<div class="card"><h3>ECG</h3><div id="ecg" class="value">0</div></div>
+<div class="card"><h3>USG</h3><div id="usg" class="value">0</div></div>
+<div class="card"><h3>X-Ray</h3><div id="xray" class="value">0</div></div>
 </div>
 
+<!-- MONTHLY GRAPH -->
 <div class="section">
-<h2>Monthly Graph</h2>
+<h2>Monthly Comparative Graph</h2>
 <canvas id="chart"></canvas>
+</div>
+
+<!-- DOCTORS -->
+<div class="section">
+<h2>Doctors</h2>
+<div class="grid" id="doctors"></div>
+</div>
+
+<!-- STAFF -->
+<div class="section">
+<h2>Staff</h2>
+<div class="grid" id="staff"></div>
+</div>
+
+<!-- HEADS -->
+<div class="section">
+<h2>Department Heads</h2>
+<div class="grid" id="heads"></div>
+</div>
+
+<!-- ROSTER -->
+<div class="section">
+<h2>Duty Roster</h2>
+<select id="rosterDate"></select>
+<div class="grid" id="rosterList"></div>
+</div>
+
+<!-- NOTICES -->
+<div class="section">
+<h2>Notices</h2>
+<div id="notices"></div>
 </div>
 
 </div>
@@ -57,30 +98,30 @@ Shivraj Hospital Dashboard
 <script>
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
-let allData=[];
+let allData=[], rosterData=[];
 
-/* ================= CLOCK ================= */
-function updateClock(){
+/* CLOCK */
+function clock(){
 let n=new Date();
 let h=n.getHours(),m=n.getMinutes(),s=n.getSeconds();
 let p="AM";
 if(h>=12)p="PM";
 if(h>12)h-=12;
 if(h===0)h=12;
-document.getElementById("clock").innerText=
-(h<10?"0"+h:h)+":"+(m<10?"0"+m:m)+":"+(s<10?"0"+s:s)+" "+p;
+clockEl.innerText=(h<10?"0"+h:h)+":"+(m<10?"0"+m:m)+":"+(s<10?"0"+s:s)+" "+p;
 }
-setInterval(updateClock,1000);updateClock();
+let clockEl=document.getElementById("clock");
+setInterval(clock,1000);clock();
 
-/* ================= BS DATE ================= */
-function setTodayBS(){
-let bs=NepaliDateConverter.ADToBS(new Date());
-document.getElementById("todayBS").innerText=
-bs.monthName+" "+bs.day+", "+bs.year;
+/* NEPALI DATE (stable) */
+function nepDate(){
+let m=["Baisakh","Jestha","Ashadh","Shrawan","Bhadra","Asoj","Kartik","Mangsir","Poush","Magh","Falgun","Chaitra"];
+let d=new Date();
+return m[d.getMonth()]+" "+d.getDate()+", "+(d.getFullYear()+57);
 }
-setTodayBS();
+document.getElementById("nepaliDate").innerText=nepDate();
 
-/* ================= LOAD DAILY ================= */
+/* LOAD DAILY */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
 .then(r=>r.json())
 .then(d=>{
@@ -88,56 +129,38 @@ allData=d||[];
 init();
 });
 
-/* ================= INIT ================= */
+/* INIT */
 function init(){
-
-let today=new Date();
-let y=today.getFullYear();
-let m=String(today.getMonth()+1).padStart(2,'0');
-let d=String(today.getDate()).padStart(2,'0');
-
-let todayStr=y+"-"+m+"-"+d;
-
-document.getElementById("datePicker").value=todayStr;
-
-searchData(); // load today
+let t=new Date();
+let y=t.getFullYear();
+let m=String(t.getMonth()+1).padStart(2,'0');
+let d=String(t.getDate()).padStart(2,'0');
+selectedDate.value=y+"-"+m+"-"+d;
+loadData();
 }
 
-/* ================= SEARCH ================= */
-function searchData(){
+/* SEARCH */
+function loadData(){
+let sel=selectedDate.value;
 
-let selected=document.getElementById("datePicker").value;
-
-let found=allData.find(row=>{
-
-let dt=new Date(row.Date);
+let f=allData.find(r=>{
+let dt=new Date(r.Date);
 if(isNaN(dt)) return false;
-
 let y=dt.getFullYear();
 let m=String(dt.getMonth()+1).padStart(2,'0');
 let d=String(dt.getDate()).padStart(2,'0');
-
-let formatted=y+"-"+m+"-"+d;
-
-return formatted===selected;
+return (y+"-"+m+"-"+d)===sel;
 });
 
-if(found){
-
-show(found);
-
-/* convert AD → BS for title */
-let bs=NepaliDateConverter.ADToBS(new Date(selected));
-
-document.getElementById("reportTitle").innerText=
-"Report (BS): "+bs.monthName+" "+bs.day+", "+bs.year;
-
+if(f){
+show(f);
+reportTitle.innerText="Report Date: "+sel;
 }else{
-alert("No data found for selected date");
+alert("No data found");
 }
 }
 
-/* ================= SHOW ================= */
+/* SHOW */
 function show(d){
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
 er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
@@ -145,26 +168,80 @@ lab.innerText=d.Lab||0;
 pharmacy.innerText=d.Pharmacy||0;
 delivery.innerText=d.Delivery||0;
 anc.innerText=d.ANC||0;
+ecg.innerText=d.ECG||0;
+usg.innerText=d.USG||0;
+xray.innerText=d["X-Ray"]||0;
 }
 
-/* ================= MONTHLY GRAPH ================= */
+/* GRAPH */
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 .then(r=>r.json())
 .then(d=>{
-
-new Chart(document.getElementById("chart"),{
+new Chart(chart,{
 type:'bar',
 data:{
 labels:d.map(x=>x.Month),
 datasets:[
-{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'#0d6efd'},
-{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'#dc3545'},
-{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'#198754'},
-{label:'Delivery',data:d.map(x=>+x.Delivery||0),backgroundColor:'#ffc107'}
+{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'blue'},
+{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'red'},
+{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'green'},
+{label:'Delivery',data:d.map(x=>+x.Delivery||0),backgroundColor:'orange'},
+{label:'ECG',data:d.map(x=>+x.ECG||0),backgroundColor:'purple'},
+{label:'USG',data:d.map(x=>+x.USG||0),backgroundColor:'cyan'},
+{label:'X-Ray',data:d.map(x=>+x["X-Ray"]||0),backgroundColor:'black'}
 ]
 }
 });
+});
 
+/* LOAD SECTIONS */
+function load(url,id){
+fetch(url).then(r=>r.json()).then(d=>{
+document.getElementById(id).innerHTML=(d||[]).map(x=>`
+<div class="card">
+<img src="${x.Photo||''}" onerror="this.style.display='none'">
+<h3>${x.Name||''}</h3>
+<p>${x.Department||x.Position||''}</p>
+</div>`).join('');
+});
+}
+
+load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
+load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
+load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
+
+/* ROSTER */
+fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
+.then(r=>r.json())
+.then(d=>{
+rosterData=d||[];
+let dates=[...new Set(d.map(x=>x.Date))];
+rosterDate.innerHTML=dates.map(x=>`<option>${x}</option>`).join('');
+loadRoster(dates[0]);
+});
+
+function loadRoster(dt){
+let f=rosterData.filter(x=>x.Date===dt);
+rosterList.innerHTML=f.map(x=>`
+<div class="card">
+<h3>${x.Doctor}</h3>
+<p>${x.Department}</p>
+<p>${x.Shift}</p>
+</div>`).join('');
+}
+rosterDate.onchange=()=>loadRoster(rosterDate.value);
+
+/* NOTICES */
+fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
+.then(r=>r.json())
+.then(d=>{
+notices.innerHTML=(d||[]).map(n=>`
+<div class="notice-card">
+<h3>${n.Title}</h3>
+<p>${n.Description}</p>
+<a class="notice-btn view" href="${n.PDF}" target="_blank">Open</a>
+<a class="notice-btn download" href="${n.PDF}" download>Download</a>
+</div>`).join('');
 });
 
 </script>
