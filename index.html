@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS v31.1</title>
+<title>Shivraj Hospital MIS v31.2</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -46,18 +46,40 @@ img{width:100%;border-radius:8px;}
 .staff-name{color:blue;font-weight:bold;}
 .staff-post{color:black;font-size:13px;}
 
+.footer{
+text-align:right;
+margin-top:15px;
+font-weight:bold;
+}
+
+/* PRINT FIX */
 @media print{
 body *{visibility:hidden;}
+
 #printArea,#printArea *{visibility:visible;}
-#printArea{position:absolute;top:0;left:0;width:100%;}
+
+#printArea{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+}
+
 .no-print{display:none;}
+
+.footer{
+visibility:visible !important;
+position:fixed;
+bottom:10px;
+right:20px;
+}
 }
 </style>
 </head>
 
 <body>
 
-<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v31.1</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v31.2</div>
 
 <div class="container">
 
@@ -99,6 +121,9 @@ body *{visibility:hidden;}
 
 </div>
 
+<!-- FOOTER RESTORED -->
+<div class="footer">MEDICAL RECORDER __________</div>
+
 </div>
 
 <!-- PIE -->
@@ -107,13 +132,13 @@ body *{visibility:hidden;}
 <canvas id="opdPie"></canvas>
 </div>
 
-<!-- CONSULTANT (FIXED FINAL) -->
+<!-- CONSULTANT -->
 <div class="section no-print">
 <h3>🩺 Consultant Services</h3>
 <div class="grid" id="consult"></div>
 </div>
 
-<!-- DUTY ROSTER -->
+<!-- DUTY ROSTER FIXED -->
 <div class="section no-print">
 <h3>📅 Today's Duty Roster</h3>
 <div class="grid" id="roster"></div>
@@ -158,7 +183,6 @@ return await r.json();
 
 let daily=[];
 
-/* INIT */
 async function init(){
 daily=await get("DAILY DATA");
 date.value=new Date().toISOString().split("T")[0];
@@ -178,6 +202,11 @@ if(!d) return;
 
 setReport(d,"Daily Report - "+date.value);
 loadPie(d);
+}
+
+/* PRINT FIX */
+function printDaily(){
+window.print();
 }
 
 /* REPORT */
@@ -220,39 +249,37 @@ data:{
 labels:[`Male (${male})`,`Female (${female})`],
 datasets:[{data:[male,female],backgroundColor:['red','blue']}]
 },
-options:{animation:{animateScale:true,animateRotate:true}}
+options:{animation:{animateScale:true}}
 });
 }
 
-/* CONSULTANT FIXED FINAL */
+/* CONSULTANT */
 async function loadConsult(){
 
 let c=await get("CONSULTANT");
 
 consult.innerHTML=(c||[]).map(x=>`
 <div class="card">
-
-<h3 style="color:#0d6efd">${x.Department||''}</h3>
-
+<h3>${x.Department||''}</h3>
 <p><b>Ortho:</b> ${x.Ortho||'-'}</p>
 <p><b>Gyne:</b> ${x.Gyne||'-'}</p>
 <p><b>Psych:</b> ${x.Psychiatric||x.Psych||'-'}</p>
 <p><b>ENT:</b> ${x.ENT||'-'}</p>
 <p><b>Derma:</b> ${x.Derma||'-'}</p>
 <p><b>Pedia:</b> ${x.Pedia||'-'}</p>
-
 </div>
 `).join('');
 }
 
-/* ROSTER */
+/* DUTY ROSTER FIXED DATE WISE */
 async function loadRoster(){
+
 let r=await get("ROSTER");
 let today=date.value;
 
-let f=(r||[]).filter(x=>x.Date && x.Date.includes(today));
+let filtered=(r||[]).filter(x=>x.Date && x.Date.includes(today));
 
-roster.innerHTML=f.map(x=>`
+roster.innerHTML=filtered.map(x=>`
 <div class="card">
 <h3>${x.Doctor||''}</h3>
 <p>${x.Department||''}</p>
