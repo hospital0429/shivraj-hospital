@@ -8,17 +8,24 @@
 
 <style>
 body{margin:0;font-family:Segoe UI;background:#eef5ff;}
+
 .header{background:#0d6efd;color:white;text-align:center;padding:15px;font-size:22px;}
+
 .container{padding:20px;}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
-.card{background:white;padding:12px;border-radius:10px;text-align:center;box-shadow:0 3px 8px rgba(0,0,0,0.1);}
+
+.card{
+background:white;padding:12px;border-radius:10px;text-align:center;
+box-shadow:0 3px 8px rgba(0,0,0,0.1);
+}
+
 .card h3{margin:0;color:#0d6efd;}
 .value{font-size:18px;font-weight:bold;margin-top:5px;}
 
 .section{margin-top:25px;}
 
-input,button,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
+input,button{padding:8px;border-radius:6px;border:1px solid #ccc;}
 button{background:#0d6efd;color:white;border:none;cursor:pointer;}
 
 .notice-card{background:white;padding:12px;margin-bottom:10px;border-radius:10px;}
@@ -34,16 +41,12 @@ img{width:100%;border-radius:8px;margin-top:5px;}
 .occ-yellow{background:#ffc107;color:black;padding:6px;border-radius:6px;}
 .occ-red{background:#dc3545;color:white;padding:6px;border-radius:6px;}
 
-/* PRINT SYSTEM */
+/* PRINT ONLY REPORT */
 @media print {
 
-body * {
-visibility:hidden;
-}
+body *{visibility:hidden;}
 
-#printArea, #printArea * {
-visibility:visible;
-}
+#printArea, #printArea *{visibility:visible;}
 
 #printArea{
 position:absolute;
@@ -52,18 +55,16 @@ top:0;
 width:100%;
 }
 
-.no-print{
-display:none !important;
-}
+.no-print{display:none !important;}
 }
 </style>
 </head>
 
 <body>
 
+<!-- HEADER -->
 <div class="header no-print">
 Shivraj Hospital Dashboard
-<div>🕒 <span id="clock"></span></div>
 </div>
 
 <div class="container">
@@ -79,6 +80,13 @@ Shivraj Hospital Dashboard
 
 <!-- PRINT AREA START -->
 <div id="printArea">
+
+<!-- PRINT HEADER -->
+<div style="text-align:center;margin-bottom:20px;">
+<h2 style="margin:0;">SHIVRAJ HOSPITAL</h2>
+<h3 id="printDate" style="margin:5px 0;">Daily Report</h3>
+<hr>
+</div>
 
 <div class="grid">
 
@@ -118,6 +126,7 @@ ____________________
 </div>
 <!-- PRINT AREA END -->
 
+<!-- GRAPHS -->
 <div class="section no-print">
 <h2>Monthly Graph</h2>
 <canvas id="chart"></canvas>
@@ -128,30 +137,17 @@ ____________________
 <canvas id="occChart"></canvas>
 </div>
 
-</div>
-
 <script>
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 let allData=[];
-
-/* CLOCK */
-setInterval(()=>{
-let n=new Date();
-let h=n.getHours(),m=n.getMinutes(),s=n.getSeconds();
-let p="AM";
-if(h>=12)p="PM";
-if(h>12)h-=12;
-if(h===0)h=12;
-document.getElementById("clock").innerText=
-(h<10?"0"+h:h)+":"+(m<10?"0"+m:m)+":"+(s<10?"0"+s:s)+" "+p;
-},1000);
 
 /* LOAD DATA */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
 .then(r=>r.json())
 .then(d=>{allData=d||[];init();});
 
+/* INIT */
 function init(){
 let t=new Date();
 let y=t.getFullYear();
@@ -163,22 +159,29 @@ loadData();
 
 /* SEARCH */
 function loadData(){
+
 let sel=selectedDate.value;
 
 let f=allData.find(r=>{
 let dt=new Date(r.Date);
 if(isNaN(dt)) return false;
+
 let y=dt.getFullYear();
 let m=String(dt.getMonth()+1).padStart(2,'0');
 let d=String(dt.getDate()).padStart(2,'0');
+
 return (y+"-"+m+"-"+d)===sel;
 });
 
-if(f){show(f);reportTitle.innerText="Report: "+sel;}
+if(f){
+show(f);
+reportTitle.innerText="Report: "+sel;
+document.getElementById("printDate").innerText="Daily Report - "+sel;
+}
 else alert("No data found");
 }
 
-/* SHOW */
+/* SHOW DATA */
 function show(d){
 
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
@@ -191,6 +194,7 @@ ecg.innerText=d.ECG||0;
 usg.innerText=d.USG||0;
 xray.innerText=d["X-Ray"]||0;
 
+/* indoor */
 let am=+d["Admitted Male"]||0;
 let af=+d["Admitted Female"]||0;
 
@@ -199,7 +203,7 @@ admittedFemale.innerText=af;
 admitted.innerText=am+af;
 discharged.innerText=d["Discharged"]||0;
 
-/* OCCUPANCY */
+/* occupancy */
 let beds=+d["Total Beds"]||0;
 let total=am+af;
 
@@ -230,17 +234,14 @@ fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 
 new Chart(chart,{
 type:'bar',
-data:{
-labels:d.map(x=>x.Month),
+data:{labels:d.map(x=>x.Month),
 datasets:[
 {label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'blue'},
 {label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'red'},
 {label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'green'}
 ]
-}
-});
+}});
 
-/* occupancy trend */
 new Chart(occChart,{
 type:'line',
 data:{
