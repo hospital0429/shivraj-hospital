@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS v32.2</title>
+<title>Shivraj Hospital MIS v33</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -57,7 +57,7 @@ body *{visibility:hidden;}
 
 <body>
 
-<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v32.2</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v33</div>
 
 <div class="container">
 
@@ -119,6 +119,16 @@ MEDICAL RECORDER __________
 <div class="grid" id="consult"></div>
 </div>
 
+<!-- EMERGENCY ROSTER (NEW) -->
+<div class="section no-print">
+<h3>🚨 Emergency Duty Roster</h3>
+
+<input type="date" id="emergencyDate">
+<button onclick="loadEmergencyRoster()">Load Roster</button>
+
+<div class="grid" id="emergencyRoster"></div>
+</div>
+
 <!-- DUTY ROSTER -->
 <div class="section no-print">
 <h3>📅 Duty Roster</h3>
@@ -176,14 +186,17 @@ daily=await get("DAILY DATA");
 let today = new Date().toLocaleDateString('en-CA', {
   timeZone: 'Asia/Kathmandu'
 });
+
 date.value=today;
 rosterDate.value=today;
+emergencyDate.value=today;
 
 loadDaily();
 loadConsult();
 loadRoster();
 loadPeople();
 loadNotice();
+loadEmergencyRoster();
 }
 init();
 
@@ -197,12 +210,11 @@ setReport(d,"Daily Report - "+date.value);
 renderPie(d);
 }
 
-/* REPORT FIX */
+/* REPORT */
 function setReport(d,titleText){
 
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
 
-/* ER FIX */
 er.innerText=
 (+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
 
@@ -219,7 +231,6 @@ let beds=+d["Total Beds"]||1;
 admitted.innerText=adm;
 discharged.innerText=dis;
 
-/* OCCUPANCY ALERT FIX */
 let occ=(adm/beds)*100;
 occupancy.innerText=occ.toFixed(1)+"%";
 
@@ -230,7 +241,7 @@ else occupancy.style.color="red";
 title.innerText=titleText;
 }
 
-/* PIE FIX */
+/* PIE */
 function renderPie(d){
 
 let male=+d["OPD Male"]||0;
@@ -266,7 +277,33 @@ consult.innerHTML=(c||[]).map(x=>`
 `).join('');
 }
 
-/* ROSTER FIX */
+/* EMERGENCY ROSTER */
+async function loadEmergencyRoster(){
+
+let data=await get("EMERGENCY_ROSTER");
+
+let d=emergencyDate.value;
+
+let f=(data||[]).filter(x=>x.Date===d);
+
+emergencyRoster.innerHTML=f.length ? f.map(x=>`
+<div class="card">
+
+<h3>
+${x.Shift==="Morning"?"🌅 Morning":
+ x.Shift==="Evening"?"🌇 Evening":"🌙 Night"}
+</h3>
+
+<p><b>Paramedics:</b> ${x.Paramedics||'-'}</p>
+<p><b>Dept:</b> ${x.Department||'-'}</p>
+
+</div>
+`).join('')
+:
+`<div class="card">No emergency duty assigned</div>`;
+}
+
+/* ROSTER */
 async function loadRoster(){
 
 let r=await get("ROSTER");
@@ -329,15 +366,9 @@ notice.innerHTML=(n||[]).map(x=>`
 `).join('');
 }
 
-/* PRINT FIX */
-function printDaily(){
-window.print();
-}
-
-function printRange(){
-loadRange();
-window.print();
-}
+/* PRINT */
+function printDaily(){window.print();}
+function printRange(){window.print();}
 
 </script>
 
