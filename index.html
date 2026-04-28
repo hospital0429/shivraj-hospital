@@ -2,15 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS System</title>
+<title>Shivraj Hospital MIS</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{margin:0;font-family:Segoe UI;background:#eef5ff;}
-
 .header{background:#0d6efd;color:white;text-align:center;padding:15px;font-size:22px;}
-
 .container{padding:20px;}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
@@ -20,102 +18,68 @@ background:white;padding:12px;border-radius:10px;
 text-align:center;box-shadow:0 3px 8px rgba(0,0,0,0.1);
 }
 
-.card h3{margin:0;color:#0d6efd;}
-.value{font-size:18px;font-weight:bold;margin-top:5px;}
-
 .section{margin-top:25px;}
 
 input,button,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
 button{background:#0d6efd;color:white;border:none;cursor:pointer;}
 
-.notice-card{
-background:white;padding:12px;margin-bottom:10px;border-radius:10px;
-}
+.notice-card{background:white;padding:12px;margin-bottom:10px;border-radius:10px;}
 
-.notice-btn{padding:6px 10px;border-radius:6px;text-decoration:none;margin-right:6px;}
-.view{background:#0d6efd;color:white;}
-.download{background:#28a745;color:white;}
-
-img{width:100%;border-radius:8px;margin-top:5px;}
-
-.occ-green{background:#198754;color:white;padding:6px;border-radius:6px;}
-.occ-yellow{background:#ffc107;color:black;padding:6px;border-radius:6px;}
-.occ-red{background:#dc3545;color:white;padding:6px;border-radius:6px;}
+img{width:100%;border-radius:8px;}
 
 @media print{
 body *{visibility:hidden;}
 #printArea,#printArea *{visibility:visible;}
 #printArea{position:absolute;left:0;top:0;width:100%;}
-.no-print{display:none !important;}
+.no-print{display:none;}
 }
 </style>
 </head>
 
 <body>
 
-<div class="header no-print">Shivraj Hospital MIS Dashboard</div>
+<div class="header no-print">Shivraj Hospital MIS System</div>
 
 <div class="container">
 
-<!-- FILTER -->
+<!-- DATE FILTER -->
 <div class="no-print" style="text-align:center;">
 <input type="date" id="selectedDate">
-<button onclick="loadData()">Search</button>
-<button onclick="printReport()">Print</button>
+<button onclick="loadDaily()">Search</button>
+<button onclick="window.print()">Print</button>
 </div>
 
-<h3 id="reportTitle"></h3>
-
-<!-- RANGE REPORT -->
+<!-- RANGE -->
 <div class="no-print" style="text-align:center;margin-top:10px;">
-<h3>📊 Range Report</h3>
+<h3>📊 Date Range Report</h3>
 <input type="date" id="fromDate">
 <input type="date" id="toDate">
-<button onclick="generateRangeReport()">Generate</button>
+<button onclick="generateRange()">Generate</button>
 </div>
 
-<div id="rangeReport"></div>
+<div id="rangeResult"></div>
 
 <!-- PRINT AREA -->
 <div id="printArea">
 
-<div style="text-align:center;margin-bottom:20px;">
-<h2>SHIVRAJ HOSPITAL</h2>
-<h3 id="printDate">Daily Report</h3>
+<h2 style="text-align:center;">SHIVRAJ HOSPITAL</h2>
+<h3 id="reportDate" style="text-align:center;"></h3>
 <hr>
-</div>
 
 <div class="grid">
 
-<div class="card"><h3>OPD</h3><div id="opd" class="value">0</div></div>
-<div class="card"><h3>ER</h3><div id="er" class="value">0</div></div>
-<div class="card"><h3>Lab</h3><div id="lab" class="value">0</div></div>
-<div class="card"><h3>Pharmacy</h3><div id="pharmacy" class="value">0</div></div>
-<div class="card"><h3>Delivery</h3><div id="delivery" class="value">0</div></div>
-<div class="card"><h3>ANC</h3><div id="anc" class="value">0</div></div>
+<div class="card">OPD<br><span id="opd">0</span></div>
+<div class="card">ER<br><span id="er">0</span></div>
+<div class="card">Lab<br><span id="lab">0</span></div>
+<div class="card">Pharmacy<br><span id="pharmacy">0</span></div>
 
-<div class="card"><h3>ECG</h3><div id="ecg" class="value">0</div></div>
-<div class="card"><h3>USG</h3><div id="usg" class="value">0</div></div>
-<div class="card"><h3>X-Ray</h3><div id="xray" class="value">0</div></div>
+<div class="card">ECG<br><span id="ecg">0</span></div>
+<div class="card">USG<br><span id="usg">0</span></div>
 
-<div class="card">
-<h3>Indoor</h3>
-<div>Total: <span id="admitted">0</span></div>
-<div>Male: <span id="admittedMale">0</span></div>
-<div>Female: <span id="admittedFemale">0</span></div>
-<div>Discharged: <span id="discharged">0</span></div>
-</div>
+<div class="card">Indoor<br><span id="indoor">0</span></div>
 
-<div class="card">
-<h3>Occupancy</h3>
-<div id="occupancy">0%</div>
-<div id="occMessage"></div>
-</div>
+<div class="card">Occupancy<br><span id="occ">0%</span></div>
 
-</div>
-
-<div style="margin-top:50px;text-align:right;">
-<b>MEDICAL RECORDER</b><br>__________
 </div>
 
 </div>
@@ -123,49 +87,18 @@ body *{visibility:hidden;}
 <!-- GRAPH -->
 <div class="section no-print">
 <h2>Monthly Graph</h2>
-<canvas id="chart"></canvas>
+<canvas id="monthlyChart"></canvas>
 </div>
 
 <div class="section no-print">
 <h2>Occupancy Trend</h2>
-<canvas id="occChart"></canvas>
+<canvas id="trendChart"></canvas>
 </div>
 
-<!-- DEPARTMENTS -->
-<div class="section no-print">
-<h2>Departments</h2>
-<div class="grid">
-<div class="card"><h3>Ortho</h3><div id="ortho" class="value">0</div></div>
-<div class="card"><h3>ENT</h3><div id="ent" class="value">0</div></div>
-<div class="card"><h3>Pedia</h3><div id="pedia" class="value">0</div></div>
-<div class="card"><h3>Derma</h3><div id="derma" class="value">0</div></div>
-<div class="card"><h3>Gyne</h3><div id="gyne" class="value">0</div></div>
-<div class="card"><h3>Psych</h3><div id="psy" class="value">0</div></div>
-</div>
-</div>
-
-<!-- DOCTORS / STAFF / HEADS -->
-<div class="section no-print"><h2>Doctors</h2><div class="grid" id="doctors"></div></div>
-<div class="section no-print"><h2>Staff</h2><div class="grid" id="staff"></div></div>
-<div class="section no-print"><h2>Heads</h2><div class="grid" id="heads"></div></div>
-
-<!-- MONDAY CONSULTANT -->
+<!-- CONSULTANT -->
 <div class="section no-print">
 <h2>🩺 Monday Consultant Schedule</h2>
-<div class="grid" id="mondayDoctors"></div>
-</div>
-
-<!-- ROSTER -->
-<div class="section no-print">
-<h2>Duty Roster</h2>
-<select id="rosterDate"></select>
-<div class="grid" id="rosterList"></div>
-</div>
-
-<!-- NOTICES -->
-<div class="section no-print">
-<h2>Notices</h2>
-<div id="notices"></div>
+<div class="grid" id="consultantBox"></div>
 </div>
 
 </div>
@@ -174,136 +107,146 @@ body *{visibility:hidden;}
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
-let allData=[],rosterData=[];
+let dailyData=[], monthlyData=[], consultantData=[];
 
-/* DAILY */
-fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
-.then(r=>r.json())
-.then(d=>{allData=d||[];init();});
-
-function init(){
-let t=new Date();
-selectedDate.value=t.toISOString().split("T")[0];
-loadData();
+/* SAFE FETCH */
+async function get(sheet){
+try{
+let r=await fetch(`https://opensheet.elk.sh/${sheetID}/${sheet}`);
+return await r.json();
+}catch(e){return [];}
 }
 
-/* SEARCH */
-function loadData(){
+/* INIT ALL */
+async function init(){
+
+dailyData = await get("DAILY DATA");
+monthlyData = await get("MONTHLY DATA");
+consultantData = await get("CONSULTANT_SCHEDULE");
+
+loadDaily();
+loadGraphs();
+loadConsultant();
+
+let today=new Date().toISOString().split("T")[0];
+selectedDate.value=today;
+}
+
+init();
+
+/* DAILY */
+function loadDaily(){
 
 let sel=selectedDate.value;
 
-let f=allData.find(r=>{
-let dt=new Date(r.Date);
-return dt.toISOString().split("T")[0]===sel;
+let f = dailyData.find(x=>{
+return x.Date && x.Date.split("T")[0]===sel;
 });
 
-if(f){
-show(f);
-document.getElementById("printDate").innerText="Daily Report - "+sel;
-}
-}
+if(!f) return;
 
-/* SHOW */
-function show(d){
+opd.innerText=(+f["OPD Male"]||0)+(+f["OPD Female"]||0);
+er.innerText=(+f["ER Red"]||0)+(+f["ER Yellow"]||0)+(+f["ER Green"]||0);
+lab.innerText=f.Lab||0;
+pharmacy.innerText=f.Pharmacy||0;
+ecg.innerText=f.ECG||0;
+usg.innerText=f.USG||0;
 
-opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
-er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
-lab.innerText=d.Lab||0;
-pharmacy.innerText=d.Pharmacy||0;
-delivery.innerText=d.Delivery||0;
-anc.innerText=d.ANC||0;
-ecg.innerText=d.ECG||0;
-usg.innerText=d.USG||0;
-xray.innerText=d["X-Ray"]||0;
+let total=(+f["Admitted Male"]||0)+(+f["Admitted Female"]||0);
+indoor.innerText=total;
 
-let am=+d["Admitted Male"]||0;
-let af=+d["Admitted Female"]||0;
+let beds=+f["Total Beds"]||0;
+occ.innerText=beds?(total/beds*100).toFixed(1)+"%":"0%";
 
-admittedMale.innerText=am;
-admittedFemale.innerText=af;
-admitted.innerText=am+af;
-discharged.innerText=d["Discharged"]||0;
-
-/* DEPTS */
-ortho.innerText=d.Ortho||0;
-ent.innerText=d.ENT||0;
-pedia.innerText=d.Pedia||0;
-derma.innerText=d.Derma||0;
-gyne.innerText=d.Gyne||0;
-psy.innerText=d.Psychiatric||0;
-
-/* OCC */
-let beds=+d["Total Beds"]||0;
-let occ=(beds?(am+af)/beds*100:0);
-occupancy.innerText=occ.toFixed(1)+"%";
+reportDate.innerText="Daily Report - "+sel;
 }
 
-/* PRINT */
-function printReport(){window.print();}
+/* RANGE REPORT FIXED */
+function generateRange(){
 
-/* LOAD SHEETS */
-function load(url,id){
-fetch(url).then(r=>r.json()).then(d=>{
-document.getElementById(id).innerHTML=(d||[]).map(x=>`
+let from=new Date(fromDate.value);
+let to=new Date(toDate.value);
+
+let filtered=dailyData.filter(x=>{
+let d=new Date(x.Date);
+return d>=from && d<=to;
+});
+
+let sum={
+opd:0,er:0,lab:0,pharmacy:0,ecg:0,usg:0,indoor:0
+};
+
+filtered.forEach(f=>{
+sum.opd+=(+f["OPD Male"]||0)+(+f["OPD Female"]||0);
+sum.er+=(+f["ER Red"]||0)+(+f["ER Yellow"]||0)+(+f["ER Green"]||0);
+sum.lab+=+f.Lab||0;
+sum.pharmacy+=+f.Pharmacy||0;
+sum.ecg+=+f.ECG||0;
+sum.usg+=+f.USG||0;
+sum.indoor+=(+f["Admitted Male"]||0)+(+f["Admitted Female"]||0);
+});
+
+rangeResult.innerHTML=`
 <div class="card">
-<img src="${x.Photo||''}" onerror="this.style.display='none'">
-<h3>${x.Name||''}</h3>
-<p>${x.Department||x.Position||''}</p>
-</div>`).join('');
-});
+<h3>📊 Range Summary</h3>
+<p>OPD: ${sum.opd}</p>
+<p>ER: ${sum.er}</p>
+<p>Lab: ${sum.lab}</p>
+<p>Pharmacy: ${sum.pharmacy}</p>
+<p>Indoor: ${sum.indoor}</p>
+</div>`;
 }
 
-load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
-load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
-load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
+/* GRAPHS FIXED */
+function loadGraphs(){
 
-/* NOTICES */
-fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
-.then(r=>r.json())
-.then(d=>{
-notices.innerHTML=(d||[]).map(n=>`
-<div class="notice-card">
-<h3>${n.Title}</h3>
-<p>${n.Description}</p>
-<a class="notice-btn view" href="${n.PDF}" target="_blank">Open</a>
-<a class="notice-btn download" href="${n.PDF}" download>Download</a>
-</div>`).join('');
+new Chart(monthlyChart,{
+type:'bar',
+data:{
+labels:monthlyData.map(x=>x.Month||""),
+datasets:[
+{label:"OPD",data:monthlyData.map(x=>+x.OPD||0),backgroundColor:"blue"},
+{label:"ER",data:monthlyData.map(x=>+x.ER||0),backgroundColor:"red"},
+{label:"Lab",data:monthlyData.map(x=>+x.Lab||0),backgroundColor:"green"}
+]
+}
 });
 
-/* MONDAY CONSULTANT */
-fetch(`https://opensheet.elk.sh/${sheetID}/CONSULTANT_SCHEDULE`)
-.then(r=>r.json())
-.then(d=>{
+new Chart(trendChart,{
+type:'line',
+data:{
+labels:monthlyData.map(x=>x.Month||""),
+datasets:[{
+label:"Occupancy %",
+data:monthlyData.map(x=>{
+let t=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
+let b=+x["Total Beds"]||1;
+return (t/b*100).toFixed(1);
+}),
+borderColor:"orange"
+}]
+}
+});
+
+}
+
+/* CONSULTANT FIXED */
+function loadConsultant(){
+
 let today=new Date();
-let monday=new Date(today.setDate(today.getDate()-today.getDay()+1));
-let ms=monday.toISOString().split("T")[0];
+today.setDate(today.getDate()-today.getDay()+1);
+let mon=today.toISOString().split("T")[0];
 
-let list=d.filter(x=>x.Date===ms);
+let list=consultantData.filter(x=>x.Date===mon);
 
-mondayDoctors.innerHTML=list.map(x=>`
+consultantBox.innerHTML=list.map(x=>`
 <div class="card">
 <h3>${x.Department}</h3>
 <p>${x.Doctor}</p>
-</div>`).join('');
-});
+</div>
+`).join('');
 
-/* ROSTER */
-fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
-.then(r=>r.json())
-.then(d=>{
-rosterData=d;
-rosterDate.innerHTML=[...new Set(d.map(x=>x.Date))].map(x=>`<option>${x}</option>`).join('');
-});
-
-rosterDate.onchange=()=>{
-rosterList.innerHTML=rosterData.filter(x=>x.Date===rosterDate.value)
-.map(x=>`
-<div class="card">
-<h3>${x.Doctor}</h3>
-<p>${x.Department}</p>
-<p>${x.Shift}</p>
-</div>`).join('');
-};
+}
 
 </script>
 
