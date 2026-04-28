@@ -41,6 +41,7 @@ img{width:100%;border-radius:8px;margin-top:5px;}
 .occ-yellow{background:#ffc107;color:black;padding:6px;border-radius:6px;}
 .occ-red{background:#dc3545;color:white;padding:6px;border-radius:6px;}
 
+/* PRINT */
 @media print{
 body *{visibility:hidden;}
 #printArea,#printArea *{visibility:visible;}
@@ -52,9 +53,7 @@ body *{visibility:hidden;}
 
 <body>
 
-<div class="header no-print">
-Shivraj Hospital Dashboard
-</div>
+<div class="header no-print">Shivraj Hospital Dashboard</div>
 
 <div class="container">
 
@@ -78,7 +77,7 @@ Shivraj Hospital Dashboard
 <div class="grid">
 
 <div class="card"><h3>OPD</h3><div id="opd" class="value">0</div></div>
-<div class="card"><h3>Emergency</h3><div id="er" class="value">0</div></div>
+<div class="card"><h3>ER</h3><div id="er" class="value">0</div></div>
 <div class="card"><h3>Lab</h3><div id="lab" class="value">0</div></div>
 <div class="card"><h3>Pharmacy</h3><div id="pharmacy" class="value">0</div></div>
 <div class="card"><h3>Delivery</h3><div id="delivery" class="value">0</div></div>
@@ -105,33 +104,22 @@ Shivraj Hospital Dashboard
 </div>
 
 <div style="margin-top:50px;text-align:right;">
-<b>MEDICAL RECORDER</b><br>___________
+<b>MEDICAL RECORDER</b><br>__________
 </div>
 
 </div>
 
-<!-- GRAPHS -->
+<!-- 📊 MONTHLY GRAPH (RESTORED) -->
 <div class="section no-print">
-<h2>Monthly Graph</h2>
+<h2>Monthly Comparative Graph</h2>
 <canvas id="chart"></canvas>
 </div>
 
+<!-- 📈 OCCUPANCY TREND (RESTORED) -->
 <div class="section no-print">
 <h2>Occupancy Trend</h2>
 <canvas id="occChart"></canvas>
 </div>
-
-<!-- SECTIONS -->
-<div class="section no-print"><h2>Doctors</h2><div class="grid" id="doctors"></div></div>
-<div class="section no-print"><h2>Staff</h2><div class="grid" id="staff"></div></div>
-<div class="section no-print"><h2>Heads</h2><div class="grid" id="heads"></div></div>
-
-<div class="section no-print"><h2>Roster</h2>
-<select id="rosterDate"></select>
-<div class="grid" id="rosterList"></div>
-</div>
-
-<div class="section no-print"><h2>Notices</h2><div id="notices"></div></div>
 
 </div>
 
@@ -139,7 +127,7 @@ Shivraj Hospital Dashboard
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
-let allData=[], rosterData=[];
+let allData=[];
 
 /* LOAD DAILY */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
@@ -221,56 +209,43 @@ else{occBox.classList.add("occ-red");msg.innerText="Full";}
 }
 
 /* PRINT */
-function printReport(){
-window.print();
-}
+function printReport(){window.print();}
 
-/* LOAD OTHER SHEETS SAFE */
-function load(url,id){
-fetch(url).then(r=>r.json()).then(d=>{
-document.getElementById(id).innerHTML=(d||[]).map(x=>`
-<div class="card">
-<img src="${x.Photo||''}" onerror="this.style.display='none'">
-<h3>${x.Name||''}</h3>
-<p>${x.Department||x.Position||''}</p>
-</div>`).join('');
-}).catch(()=>{});
-}
-
-load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
-load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
-load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
-
-/* ROSTER SAFE */
-fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
+/* 📊 MONTHLY GRAPH RESTORED */
+fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 .then(r=>r.json())
 .then(d=>{
-rosterData=d||[];
-let dates=[...new Set(d.map(x=>x.Date))];
-rosterDate.innerHTML=dates.map(x=>`<option>${x}</option>`).join('');
+
+new Chart(chart,{
+type:'bar',
+data:{
+labels:d.map(x=>x.Month),
+datasets:[
+{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'blue'},
+{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'red'},
+{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'green'},
+{label:'Delivery',data:d.map(x=>+x.Delivery||0),backgroundColor:'orange'}
+]
+}
 });
 
-rosterDate.onchange=()=>{
-let f=rosterData.filter(x=>x.Date===rosterDate.value);
-rosterList.innerHTML=f.map(x=>`
-<div class="card">
-<h3>${x.Doctor}</h3>
-<p>${x.Department}</p>
-<p>${x.Shift}</p>
-</div>`).join('');
-};
+/* 📈 OCCUPANCY TREND RESTORED */
+new Chart(occChart,{
+type:'line',
+data:{
+labels:d.map(x=>x.Month),
+datasets:[{
+label:'Occupancy %',
+data:d.map(x=>{
+let t=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
+let b=+x["Total Beds"]||0;
+return b?((t/b)*100).toFixed(1):0;
+}),
+borderColor:'red'
+}]
+}
+});
 
-/* NOTICES SAFE */
-fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
-.then(r=>r.json())
-.then(d=>{
-notices.innerHTML=(d||[]).map(n=>`
-<div class="notice-card">
-<h3>${n.Title}</h3>
-<p>${n.Description}</p>
-<a class="notice-btn view" href="${n.PDF}" target="_blank">Open</a>
-<a class="notice-btn download" href="${n.PDF}" download>Download</a>
-</div>`).join('');
 });
 
 </script>
