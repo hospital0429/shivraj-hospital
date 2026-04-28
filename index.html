@@ -42,7 +42,6 @@ text-align:center;
 }
 
 .card h3{color:#0d6efd;margin:0;}
-
 .value{font-size:20px;font-weight:bold;margin-top:10px;}
 
 .section{margin-top:30px;}
@@ -110,6 +109,7 @@ font-size:14px;
 <!-- MONTHLY -->
 <div class="section">
 <h2>Monthly Report</h2>
+
 <select id="monthSelect"></select>
 
 <div class="grid">
@@ -184,6 +184,7 @@ let date=selectedDate.value;
 let found=allData.find(d=>{
 let dt=new Date(d.Date);
 if(isNaN(dt)) return false;
+
 let f=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')+"-"+String(dt.getDate()).padStart(2,'0');
 return f===date;
 });
@@ -191,7 +192,7 @@ return f===date;
 if(found){
 showData(found);
 reportTitle.innerText="Date: "+date;
-}else alert("No data");
+}else alert("No data found");
 }
 
 function showData(d){
@@ -201,52 +202,58 @@ opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
 let r=+d["ER Red"]||0,y=+d["ER Yellow"]||0,g=+d["ER Green"]||0;
 er.innerText=r+y+g;
 
-lab.innerText=d.Lab||0;
-pharmacy.innerText=d.Pharmacy||0;
-delivery.innerText=d.Delivery||0;
-anc.innerText=d.ANC||0;
+lab.innerText=Number(d.Lab||0);
+pharmacy.innerText=Number(d.Pharmacy||0);
+delivery.innerText=Number(d.Delivery||0);
+anc.innerText=Number(d.ANC||0);
 
-ecg.innerText=d.ECG||0;
-usg.innerText=d.USG||0;
-xray.innerText=d["X-Ray"]||0;
+ecg.innerText=Number(d.ECG||0);
+usg.innerText=Number(d.USG||0);
+xray.innerText=Number(d["X-Ray"]||0);
 }
 
-/* MONTHLY + GRAPH */
+/* MONTHLY FIXED */
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY DATA`)
 .then(r=>r.json())
 .then(d=>{
+
 monthlyData=d;
 
 monthSelect.innerHTML="";
 
 d.forEach(x=>{
-monthSelect.innerHTML+=`<option>${x.Month}</option>`;
+monthSelect.innerHTML+=`<option value="${x.Month}">${x.Month}</option>`;
 });
 
 loadMonth(d[d.length-1].Month);
 
 new Chart(chart,{
-type:'line',
+type:'bar',
 data:{
 labels:d.map(x=>x.Month),
-datasets:[{label:'OPD',data:d.map(x=>+x.OPD||0)}]
+datasets:[{
+label:'OPD',
+data:d.map(x=>Number(x.OPD||0))
+}]
 }
 });
+
 });
 
 function loadMonth(m){
+
 let d=monthlyData.find(x=>x.Month===m);
 if(!d) return;
 
-m_opd.innerText=d.OPD||0;
-m_er.innerText=d.ER||0;
-m_delivery.innerText=d.Delivery||0;
-m_anc.innerText=d.ANC||0;
-m_lab.innerText=d.Lab||0;
-m_pharmacy.innerText=d.Pharmacy||0;
-m_ecg.innerText=d.ECG||0;
-m_usg.innerText=d.USG||0;
-m_xray.innerText=d["X-Ray"]||0;
+m_opd.innerText=Number(d.OPD||0);
+m_er.innerText=Number(d.ER||0);
+m_delivery.innerText=Number(d.Delivery||0);
+m_anc.innerText=Number(d.ANC||0);
+m_lab.innerText=Number(d.Lab||0);
+m_pharmacy.innerText=Number(d.Pharmacy||0);
+m_ecg.innerText=Number(d.ECG||0);
+m_usg.innerText=Number(d.USG||0);
+m_xray.innerText=Number(d["X-Ray"]||0);
 }
 
 monthSelect.onchange=()=>loadMonth(monthSelect.value);
@@ -291,6 +298,7 @@ heads.innerHTML=d.map(x=>`
 fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
 .then(r=>r.json())
 .then(d=>{
+
 d.sort((a,b)=>new Date(b.Date)-new Date(a.Date));
 
 notices.innerHTML=d.map(n=>`
@@ -310,6 +318,7 @@ notices.innerHTML=d.map(n=>`
 
 </div>
 `).join('');
+
 });
 
 /* PRINT */
