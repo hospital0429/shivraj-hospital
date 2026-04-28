@@ -6,6 +6,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- NEPALI DATE CONVERTER -->
+<script src="https://unpkg.com/nepali-date-converter/dist/index.min.js"></script>
+
 <style>
 body{margin:0;font-family:'Segoe UI';background:#f0f6ff;}
 
@@ -81,7 +84,7 @@ font-size:14px;
 
 <body>
 
-<div class="header">Shivraj Hospital Dashboard</div>
+<div class="header">Shivraj Hospital Dashboard (BS Enabled)</div>
 
 <div class="container">
 
@@ -169,6 +172,13 @@ const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
 let allData=[], monthlyData=[];
 
+/* NEPALI DATE FUNCTION */
+function toBS(date){
+let d = new Date(date);
+let bs = NepaliDateConverter.ADToBS(d);
+return bs.year+"-"+String(bs.month).padStart(2,'0')+"-"+String(bs.day).padStart(2,'0');
+}
+
 /* DAILY */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
 .then(r=>r.json())
@@ -182,7 +192,7 @@ selectedDate.value=new Date().toISOString().split('T')[0];
 function loadLatest(){
 let d=allData[allData.length-1];
 showData(d);
-reportTitle.innerText="Today: "+d.Date;
+reportTitle.innerText="Date (BS): "+toBS(d.Date);
 }
 
 function loadData(){
@@ -193,12 +203,13 @@ let dt=new Date(d.Date);
 if(isNaN(dt)) return false;
 
 let f=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')+"-"+String(dt.getDate()).padStart(2,'0');
+
 return f===date;
 });
 
 if(found){
 showData(found);
-reportTitle.innerText="Date: "+date;
+reportTitle.innerText="Date (BS): "+toBS(found.Date);
 }else alert("No data found");
 }
 
@@ -219,7 +230,7 @@ usg.innerText=Number(d.USG||0);
 xray.innerText=Number(d["X-Ray"]||0);
 }
 
-/* MONTHLY FIXED + COMPARATIVE GRAPH */
+/* MONTHLY + COMPARATIVE GRAPH */
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 .then(r=>r.json())
 .then(d=>{
@@ -234,7 +245,6 @@ monthSelect.innerHTML+=`<option value="${x.Month}">${x.Month}</option>`;
 
 loadMonth(d[d.length-1].Month);
 
-/* COMPARATIVE GRAPH */
 new Chart(chart,{
 type:'bar',
 data:{
@@ -282,69 +292,36 @@ m_xray.innerText=Number(d["X-Ray"]||0);
 
 monthSelect.onchange=()=>loadMonth(monthSelect.value);
 
-/* DOCTORS */
-fetch(`https://opensheet.elk.sh/${sheetID}/DOCTORS`)
-.then(r=>r.json())
-.then(d=>{
-doctors.innerHTML=d.map(x=>`
-<div class="card">
-<img src="${x.Photo}">
-<h3>${x.Name}</h3>
-<p>${x.Department}</p>
-</div>`).join('');
+/* OTHER SECTIONS */
+fetch(`https://opensheet.elk.sh/${sheetID}/DOCTORS`).then(r=>r.json()).then(d=>{
+doctors.innerHTML=d.map(x=>`<div class="card"><img src="${x.Photo}"><h3>${x.Name}</h3><p>${x.Department}</p></div>`).join('');
 });
 
-/* STAFF */
-fetch(`https://opensheet.elk.sh/${sheetID}/STAFF`)
-.then(r=>r.json())
-.then(d=>{
-staff.innerHTML=d.map(x=>`
-<div class="card">
-<img src="${x.Photo}">
-<h3>${x.Name}</h3>
-<p>${x.Position}</p>
-</div>`).join('');
+fetch(`https://opensheet.elk.sh/${sheetID}/STAFF`).then(r=>r.json()).then(d=>{
+staff.innerHTML=d.map(x=>`<div class="card"><img src="${x.Photo}"><h3>${x.Name}</h3><p>${x.Position}</p></div>`).join('');
 });
 
-/* HEADS */
-fetch(`https://opensheet.elk.sh/${sheetID}/HEADS`)
-.then(r=>r.json())
-.then(d=>{
-heads.innerHTML=d.map(x=>`
-<div class="card">
-<img src="${x.Photo}">
-<h3>${x.Name}</h3>
-<p>${x.Department}</p>
-</div>`).join('');
+fetch(`https://opensheet.elk.sh/${sheetID}/HEADS`).then(r=>r.json()).then(d=>{
+heads.innerHTML=d.map(x=>`<div class="card"><img src="${x.Photo}"><h3>${x.Name}</h3><p>${x.Department}</p></div>`).join('');
 });
 
-/* NOTICES */
-fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
-.then(r=>r.json())
-.then(d=>{
-
+fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`).then(r=>r.json()).then(d=>{
 d.sort((a,b)=>new Date(b.Date)-new Date(a.Date));
 
 notices.innerHTML=d.map(n=>`
 <div class="notice-card">
-
 <h3>${n.Title}</h3>
 <small>${n.Date}</small>
 <p>${n.Description}</p>
-
 <div class="notice-actions">
-
 <a class="notice-btn view" href="${n.PDF}" target="_blank">📄 Open</a>
-
 <a class="notice-btn download" href="${n.PDF}" download>⬇ Download</a>
-
 </div>
-
 </div>
 `).join('');
-
 });
 
+/* PRINT */
 function printReport(){
 let w=window.open();
 w.document.write(`
