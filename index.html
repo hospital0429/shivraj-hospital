@@ -9,16 +9,66 @@
 <style>
 body{margin:0;font-family:'Segoe UI';background:#f0f6ff;}
 .header{background:#0d6efd;color:white;padding:18px;text-align:center;font-size:26px;}
+
 .container{padding:20px;}
+
 .dateBox{text-align:center;margin:15px;}
-input,button{padding:8px;border-radius:6px;border:1px solid #ccc;}
-button{background:#0d6efd;color:white;border:none;cursor:pointer;}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;}
-.card{background:white;padding:15px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);}
-.card h3{margin:0;color:#0d6efd;}
-.value{font-size:20px;margin-top:10px;font-weight:bold;}
+
+input,button{
+padding:8px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+button{
+background:#0d6efd;
+color:white;
+border:none;
+cursor:pointer;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:15px;
+}
+
+.card{
+background:white;
+padding:15px;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+text-align:center;
+}
+
+.card h3{color:#0d6efd;margin:0;}
+
+.value{font-size:20px;font-weight:bold;margin-top:10px;}
+
 .section{margin-top:30px;}
+
 img{width:100%;border-radius:8px;margin-top:10px;}
+
+.notice-card{
+background:white;
+padding:15px;
+margin-bottom:15px;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.notice-actions{margin-top:10px;display:flex;gap:10px;}
+
+.notice-btn{
+padding:6px 10px;
+border-radius:6px;
+text-decoration:none;
+font-size:14px;
+}
+
+.view{background:#0d6efd;color:white;}
+.download{background:#28a745;color:white;}
+
 </style>
 
 </head>
@@ -109,166 +159,177 @@ img{width:100%;border-radius:8px;margin-top:10px;}
 <script>
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
+
 let allData=[], monthlyData=[];
 
-// DAILY DATA
+/* DAILY */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
 .then(r=>r.json())
 .then(d=>{
-    allData=d;
-    loadLatest();
+allData=d;
+loadLatest();
 });
 
-// TODAY AUTO
-document.getElementById("selectedDate").value=
-new Date().toISOString().split('T')[0];
+selectedDate.value=new Date().toISOString().split('T')[0];
 
 function loadLatest(){
-    const d=allData[allData.length-1];
-    showData(d);
-    reportTitle.innerText="Today: "+d["Date"];
+let d=allData[allData.length-1];
+showData(d);
+reportTitle.innerText="Today: "+d.Date;
 }
 
-// SEARCH
 function loadData(){
-    const date=selectedDate.value;
+let date=selectedDate.value;
 
-    const found=allData.find(d=>{
-        const dt=new Date(d["Date"]);
-        if(isNaN(dt)) return false;
+let found=allData.find(d=>{
+let dt=new Date(d.Date);
+if(isNaN(dt)) return false;
+let f=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')+"-"+String(dt.getDate()).padStart(2,'0');
+return f===date;
+});
 
-        const f=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')+"-"+String(dt.getDate()).padStart(2,'0');
-        return f===date;
-    });
-
-    if(found){
-        showData(found);
-        reportTitle.innerText="Date: "+date;
-    } else alert("No report found");
+if(found){
+showData(found);
+reportTitle.innerText="Date: "+date;
+}else alert("No data");
 }
 
-// SHOW DATA
 function showData(d){
 
-    const m=+d["OPD Male"]||0, f=+d["OPD Female"]||0;
-    opd.innerText=m+f+" (M:"+m+" F:"+f+")";
+opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
 
-    const r=+d["ER Red"]||0, y=+d["ER Yellow"]||0, g=+d["ER Green"]||0;
-    er.innerText=(r+y+g)+" (R:"+r+" Y:"+y+" G:"+g+")";
+let r=+d["ER Red"]||0,y=+d["ER Yellow"]||0,g=+d["ER Green"]||0;
+er.innerText=r+y+g;
 
-    lab.innerText=d["Lab"]||0;
-    pharmacy.innerText=d["Pharmacy"]||0;
-    delivery.innerText=d["Delivery"]||0;
-    anc.innerText=d["ANC"]||0;
+lab.innerText=d.Lab||0;
+pharmacy.innerText=d.Pharmacy||0;
+delivery.innerText=d.Delivery||0;
+anc.innerText=d.ANC||0;
 
-    ecg.innerText=d["ECG"]||0;
-    usg.innerText=d["USG"]||0;
-    xray.innerText=d["X-Ray"]||0;
+ecg.innerText=d.ECG||0;
+usg.innerText=d.USG||0;
+xray.innerText=d["X-Ray"]||0;
 }
 
-// MONTHLY + GRAPH
+/* MONTHLY + GRAPH */
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY DATA`)
 .then(r=>r.json())
 .then(d=>{
-    monthlyData=d;
+monthlyData=d;
 
-    monthSelect.innerHTML="";
-    d.forEach(x=>monthSelect.innerHTML+=`<option>${x.Month}</option>`);
+monthSelect.innerHTML="";
 
-    loadMonth(d[d.length-1].Month);
+d.forEach(x=>{
+monthSelect.innerHTML+=`<option>${x.Month}</option>`;
+});
 
-    new Chart(chart,{
-        type:'line',
-        data:{
-            labels:d.map(x=>x.Month),
-            datasets:[{label:'OPD',data:d.map(x=>+x.OPD||0),borderWidth:2}]
-        }
-    });
+loadMonth(d[d.length-1].Month);
+
+new Chart(chart,{
+type:'line',
+data:{
+labels:d.map(x=>x.Month),
+datasets:[{label:'OPD',data:d.map(x=>+x.OPD||0)}]
+}
+});
 });
 
 function loadMonth(m){
-    const d=monthlyData.find(x=>x.Month===m);
-    if(!d) return;
+let d=monthlyData.find(x=>x.Month===m);
+if(!d) return;
 
-    m_opd.innerText=d.OPD||0;
-    m_er.innerText=d.ER||0;
-    m_delivery.innerText=d.Delivery||0;
-    m_anc.innerText=d.ANC||0;
-    m_lab.innerText=d.Lab||0;
-    m_pharmacy.innerText=d.Pharmacy||0;
-    m_ecg.innerText=d.ECG||0;
-    m_usg.innerText=d.USG||0;
-    m_xray.innerText=d["X-Ray"]||0;
+m_opd.innerText=d.OPD||0;
+m_er.innerText=d.ER||0;
+m_delivery.innerText=d.Delivery||0;
+m_anc.innerText=d.ANC||0;
+m_lab.innerText=d.Lab||0;
+m_pharmacy.innerText=d.Pharmacy||0;
+m_ecg.innerText=d.ECG||0;
+m_usg.innerText=d.USG||0;
+m_xray.innerText=d["X-Ray"]||0;
 }
 
-monthSelect.onchange=function(){loadMonth(this.value)};
+monthSelect.onchange=()=>loadMonth(monthSelect.value);
 
-// DOCTORS
+/* DOCTORS */
 fetch(`https://opensheet.elk.sh/${sheetID}/DOCTORS`)
-.then(r=>r.json()).then(d=>{
-    doctors.innerHTML=d.map(x=>`
-    <div class="card">
-    <img src="${x.Photo}">
-    <h3>${x.Name}</h3>
-    <p>${x.Department}</p>
-    </div>`).join('');
+.then(r=>r.json())
+.then(d=>{
+doctors.innerHTML=d.map(x=>`
+<div class="card">
+<img src="${x.Photo}">
+<h3>${x.Name}</h3>
+<p>${x.Department}</p>
+</div>`).join('');
 });
 
-// STAFF
+/* STAFF */
 fetch(`https://opensheet.elk.sh/${sheetID}/STAFF`)
-.then(r=>r.json()).then(d=>{
-    staff.innerHTML=d.map(x=>`
-    <div class="card">
-    <img src="${x.Photo}">
-    <h3>${x.Name}</h3>
-    <p>${x.Position}</p>
-    </div>`).join('');
+.then(r=>r.json())
+.then(d=>{
+staff.innerHTML=d.map(x=>`
+<div class="card">
+<img src="${x.Photo}">
+<h3>${x.Name}</h3>
+<p>${x.Position}</p>
+</div>`).join('');
 });
 
-// HEADS
+/* HEADS */
 fetch(`https://opensheet.elk.sh/${sheetID}/HEADS`)
-.then(r=>r.json()).then(d=>{
-    heads.innerHTML=d.map(x=>`
-    <div class="card">
-    <img src="${x.Photo}">
-    <h3>${x.Name}</h3>
-    <p>${x.Department}</p>
-    </div>`).join('');
+.then(r=>r.json())
+.then(d=>{
+heads.innerHTML=d.map(x=>`
+<div class="card">
+<img src="${x.Photo}">
+<h3>${x.Name}</h3>
+<p>${x.Department}</p>
+</div>`).join('');
 });
 
-// NOTICES
+/* NOTICES */
 fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
-.then(r=>r.json()).then(d=>{
-    notices.innerHTML=d.reverse().map(n=>`
-    <div class="card">
-    <h3>${n.Title}</h3>
-    <p>${n.Description}</p>
-    <small>${n.Date}</small>
-    ${n.Image?`<img src="${n.Image}">`:""}
-    </div>`).join('');
+.then(r=>r.json())
+.then(d=>{
+d.sort((a,b)=>new Date(b.Date)-new Date(a.Date));
+
+notices.innerHTML=d.map(n=>`
+<div class="notice-card">
+
+<h3>${n.Title}</h3>
+<small>${n.Date}</small>
+<p>${n.Description}</p>
+
+<div class="notice-actions">
+
+<a class="notice-btn view" href="${n.PDF}" target="_blank">📄 Open</a>
+
+<a class="notice-btn download" href="${n.PDF}" download>⬇ Download</a>
+
+</div>
+
+</div>
+`).join('');
 });
 
-// PRINT
+/* PRINT */
 function printReport(){
-
-    const w=window.open('','','width=900,height=600');
-
-    w.document.write(`
-    <h2>Shivraj Hospital Report</h2>
-    <p>${reportTitle.innerText}</p>
-    <hr>
-    <p>OPD: ${opd.innerText}</p>
-    <p>ER: ${er.innerText}</p>
-    <p>Lab: ${lab.innerText}</p>
-    <p>Pharmacy: ${pharmacy.innerText}</p>
-    <p>Delivery: ${delivery.innerText}</p>
-    <p>ANC: ${anc.innerText}</p>
-    <p>ECG: ${ecg.innerText}</p>
-    <p>USG: ${usg.innerText}</p>
-    <p>X-Ray: ${xray.innerText}</p>
-    `);
-
-    w.print();
+let w=window.open();
+w.document.write(`
+<h2>Shivraj Hospital Report</h2>
+<p>${reportTitle.innerText}</p>
+<hr>
+<p>OPD: ${opd.innerText}</p>
+<p>ER: ${er.innerText}</p>
+<p>Lab: ${lab.innerText}</p>
+<p>Pharmacy: ${pharmacy.innerText}</p>
+<p>Delivery: ${delivery.innerText}</p>
+<p>ANC: ${anc.innerText}</p>
+<p>ECG: ${ecg.innerText}</p>
+<p>USG: ${usg.innerText}</p>
+<p>X-Ray: ${xray.innerText}</p>
+`);
+w.print();
 }
 
 </script>
