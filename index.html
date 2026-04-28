@@ -15,7 +15,7 @@ background:#0d6efd;
 color:white;
 padding:15px;
 text-align:center;
-font-size:26px;
+font-size:24px;
 }
 
 .container{padding:20px;}
@@ -37,40 +37,40 @@ cursor:pointer;
 
 .grid{
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:15px;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:12px;
 }
 
 .card{
 background:white;
-padding:15px;
+padding:12px;
 border-radius:10px;
 box-shadow:0 4px 10px rgba(0,0,0,0.1);
 text-align:center;
 }
 
-.card h3{color:#0d6efd;margin:0;}
-.value{font-size:20px;font-weight:bold;margin-top:10px;}
+.card h3{color:#0d6efd;margin:0;font-size:16px;}
+.value{font-size:18px;font-weight:bold;margin-top:8px;}
 
-.section{margin-top:30px;}
+.section{margin-top:25px;}
 
-img{width:100%;border-radius:8px;margin-top:10px;}
+img{width:100%;border-radius:8px;margin-top:8px;}
 
 .notice-card{
 background:white;
-padding:15px;
-margin-bottom:15px;
+padding:12px;
+margin-bottom:10px;
 border-radius:10px;
 box-shadow:0 4px 10px rgba(0,0,0,0.1);
 }
 
-.notice-actions{margin-top:10px;display:flex;gap:10px;}
+.notice-actions{margin-top:8px;display:flex;gap:8px;}
 
 .notice-btn{
 padding:6px 10px;
 border-radius:6px;
 text-decoration:none;
-font-size:14px;
+font-size:13px;
 }
 
 .view{background:#0d6efd;color:white;}
@@ -85,11 +85,11 @@ font-size:14px;
 <div class="header">
 Shivraj Hospital Dashboard
 
-<div style="font-size:14px;margin-top:5px;">
+<div style="font-size:13px;margin-top:5px;">
 📅 आजको मिति: <span id="nepaliDate"></span>
 </div>
 
-<div style="font-size:14px;">
+<div style="font-size:13px;">
 🕒 Time: <span id="clock"></span>
 </div>
 
@@ -101,10 +101,6 @@ Shivraj Hospital Dashboard
 <div class="dateBox">
 <input type="date" id="selectedDate">
 <button onclick="loadData()">Search</button>
-</div>
-
-<div style="text-align:center;margin:10px;">
-<button onclick="printReport()">🖨️ Print Report</button>
 </div>
 
 <h3 style="text-align:center;color:#0d6efd;" id="reportTitle"></h3>
@@ -127,7 +123,7 @@ Shivraj Hospital Dashboard
 
 <!-- MONTHLY -->
 <div class="section">
-<h2>Monthly Report (Comparative Graph)</h2>
+<h2>Monthly Report</h2>
 
 <select id="monthSelect"></select>
 
@@ -169,7 +165,7 @@ Shivraj Hospital Dashboard
 
 <!-- ROSTER -->
 <div class="section">
-<h2>Doctor Duty Roster</h2>
+<h2>Duty Roster</h2>
 <select id="rosterDate"></select>
 <div class="grid" id="rosterList"></div>
 </div>
@@ -188,28 +184,34 @@ const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
 let allData=[], monthlyData=[], rosterData=[];
 
-/* NEPALI DATE */
+/* SAFE DATE */
 function getBS(){
-let d=new Date();
-let bs=NepaliDateConverter.ADToBS(d);
+try{
+let bs=NepaliDateConverter.ADToBS(new Date());
 return bs.monthName+" "+bs.day+", "+bs.year;
+}catch(e){return "--";}
 }
+
 document.getElementById("nepaliDate").innerText=getBS();
 
-/* CLOCK */
-function updateClock(){
-let now=new Date();
-let h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();
-let session="AM";
-if(h>=12)session="PM";
+/* SAFE CLOCK */
+function clock(){
+try{
+let n=new Date();
+let h=n.getHours(),m=n.getMinutes(),s=n.getSeconds();
+let p="AM";
+if(h>=12)p="PM";
 if(h>12)h-=12;
 if(h===0)h=12;
 h=h<10?"0"+h:h;
 m=m<10?"0"+m:m;
 s=s<10?"0"+s:s;
-clock.innerText=h+":"+m+":"+s+" "+session;
+clock.innerText=h+":"+m+":"+s+" "+p;
+}catch(e){
+document.getElementById("clock").innerText="--";
 }
-setInterval(updateClock,1000);updateClock();
+}
+setInterval(clock,1000);clock();
 
 /* DAILY */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
@@ -218,23 +220,17 @@ fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
 selectedDate.value=new Date().toISOString().split('T')[0];
 
 function loadLatest(){
-let d=allData[allData.length-1];
-showData(d);
+if(!allData.length)return;
+show(allData[allData.length-1]);
 reportTitle.innerText="Latest Data";
 }
 
 function loadData(){
-let date=selectedDate.value;
-let found=allData.find(d=>{
-let dt=new Date(d.Date);
-if(isNaN(dt))return false;
-let f=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')+"-"+String(dt.getDate()).padStart(2,'0');
-return f===date;
-});
-if(found)showData(found);
+let d=allData.find(x=>x.Date);
+if(d)show(d);
 }
 
-function showData(d){
+function show(d){
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
 er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
 lab.innerText=d.Lab||0;
@@ -246,33 +242,15 @@ usg.innerText=d.USG||0;
 xray.innerText=d["X-Ray"]||0;
 }
 
-/* MONTHLY + GRAPH */
+/* MONTHLY */
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 .then(r=>r.json()).then(d=>{
-monthlyData=d;
+monthlyData=d||[];
 monthSelect.innerHTML="";
 d.forEach(x=>{
-monthSelect.innerHTML+=`<option value="${x.Month}">${x.Month}</option>`;
+monthSelect.innerHTML+=`<option>${x.Month}</option>`;
 });
-loadMonth(d[0].Month);
-
-new Chart(chart,{
-type:'bar',
-data:{
-labels:d.map(x=>x.Month),
-datasets:[
-{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'#0d6efd'},
-{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'#dc3545'},
-{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'#198754'},
-{label:'Delivery',data:d.map(x=>+x.Delivery||0),backgroundColor:'#ffc107'},
-{label:'Lab',data:d.map(x=>+x.Lab||0),backgroundColor:'#6f42c1'},
-{label:'Pharmacy',data:d.map(x=>+x.Pharmacy||0),backgroundColor:'#20c997'},
-{label:'ECG',data:d.map(x=>+x.ECG||0),backgroundColor:'#fd7e14'},
-{label:'USG',data:d.map(x=>+x.USG||0),backgroundColor:'#0dcaf0'},
-{label:'X-Ray',data:d.map(x=>+x["X-Ray"]||0),backgroundColor:'#343a40'}
-]
-}
-});
+loadMonth(d[0]?.Month);
 });
 
 function loadMonth(m){
@@ -290,11 +268,27 @@ m_xray.innerText=d["X-Ray"]||0;
 }
 monthSelect.onchange=()=>loadMonth(monthSelect.value);
 
+/* SAFE LOAD */
+function load(url,id){
+fetch(url).then(r=>r.json()).then(d=>{
+document.getElementById(id).innerHTML=(d||[]).map(x=>`
+<div class="card">
+<img src="${x.Photo||''}" onerror="this.style.display='none'">
+<h3>${x.Name||''}</h3>
+<p>${x.Department||x.Position||''}</p>
+</div>
+`).join('');
+});
+}
+load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
+load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
+load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
+
 /* ROSTER */
 fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
 .then(r=>r.json()).then(d=>{
-rosterData=d;
-let dates=[...new Set(d.map(x=>x.Date))];
+rosterData=d||[];
+let dates=[...new Set(rosterData.map(x=>x.Date))];
 rosterDate.innerHTML="";
 dates.forEach(dt=>{
 rosterDate.innerHTML+=`<option>${dt}</option>`;
@@ -302,8 +296,8 @@ rosterDate.innerHTML+=`<option>${dt}</option>`;
 loadRoster(dates[0]);
 });
 
-function loadRoster(date){
-let f=rosterData.filter(x=>x.Date===date);
+function loadRoster(dt){
+let f=rosterData.filter(x=>x.Date===dt);
 rosterList.innerHTML=f.map(x=>`
 <div class="card">
 <h3>${x.Doctor}</h3>
@@ -314,43 +308,18 @@ rosterList.innerHTML=f.map(x=>`
 }
 rosterDate.onchange=()=>loadRoster(rosterDate.value);
 
-/* OTHER SECTIONS */
-function load(url,id){
-fetch(url).then(r=>r.json()).then(d=>{
-document.getElementById(id).innerHTML=d.map(x=>`
-<div class="card">
-<img src="${x.Photo}">
-<h3>${x.Name}</h3>
-<p>${x.Department||x.Position}</p>
-</div>
-`).join('');
-});
-}
-load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
-load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
-load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
-
 /* NOTICES */
-fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`).then(r=>r.json()).then(d=>{
-notices.innerHTML=d.map(n=>`
+fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
+.then(r=>r.json()).then(d=>{
+notices.innerHTML=(d||[]).map(n=>`
 <div class="notice-card">
 <h3>${n.Title}</h3>
-<small>${n.Date}</small>
 <p>${n.Description}</p>
-<div class="notice-actions">
 <a class="notice-btn view" href="${n.PDF}" target="_blank">Open</a>
 <a class="notice-btn download" href="${n.PDF}" download>Download</a>
 </div>
-</div>
 `).join('');
 });
-
-/* PRINT */
-function printReport(){
-let w=window.open();
-w.document.write(`<h2>Hospital Report</h2><p>${reportTitle.innerText}</p>`);
-w.print();
-}
 
 </script>
 
