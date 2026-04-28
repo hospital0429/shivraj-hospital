@@ -8,7 +8,14 @@
 
 <style>
 body{margin:0;font-family:'Segoe UI';background:#f0f6ff;}
-.header{background:#0d6efd;color:white;padding:18px;text-align:center;font-size:26px;}
+
+.header{
+background:#0d6efd;
+color:white;
+padding:18px;
+text-align:center;
+font-size:26px;
+}
 
 .container{padding:20px;}
 
@@ -108,7 +115,7 @@ font-size:14px;
 
 <!-- MONTHLY -->
 <div class="section">
-<h2>Monthly Report</h2>
+<h2>Monthly Report (Comparative Graph)</h2>
 
 <select id="monthSelect"></select>
 
@@ -212,8 +219,8 @@ usg.innerText=Number(d.USG||0);
 xray.innerText=Number(d["X-Ray"]||0);
 }
 
-/* MONTHLY FIXED */
-fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY DATA`)
+/* MONTHLY FIXED + COMPARATIVE GRAPH */
+fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 .then(r=>r.json())
 .then(d=>{
 
@@ -227,14 +234,31 @@ monthSelect.innerHTML+=`<option value="${x.Month}">${x.Month}</option>`;
 
 loadMonth(d[d.length-1].Month);
 
+/* COMPARATIVE GRAPH */
 new Chart(chart,{
 type:'bar',
 data:{
 labels:d.map(x=>x.Month),
-datasets:[{
-label:'OPD',
-data:d.map(x=>Number(x.OPD||0))
-}]
+
+datasets:[
+
+{label:'OPD',data:d.map(x=>Number(x.OPD||0)),backgroundColor:'#0d6efd'},
+{label:'ER',data:d.map(x=>Number(x.ER||0)),backgroundColor:'#dc3545'},
+{label:'ANC',data:d.map(x=>Number(x.ANC||0)),backgroundColor:'#198754'},
+{label:'Delivery',data:d.map(x=>Number(x.Delivery||0)),backgroundColor:'#ffc107'},
+{label:'Lab',data:d.map(x=>Number(x.Lab||0)),backgroundColor:'#6f42c1'},
+{label:'Pharmacy',data:d.map(x=>Number(x.Pharmacy||0)),backgroundColor:'#20c997'},
+{label:'ECG',data:d.map(x=>Number(x.ECG||0)),backgroundColor:'#fd7e14'},
+{label:'USG',data:d.map(x=>Number(x.USG||0)),backgroundColor:'#0dcaf0'},
+{label:'X-Ray',data:d.map(x=>Number(x["X-Ray"]||0)),backgroundColor:'#343a40'}
+
+]
+
+},
+options:{
+responsive:true,
+plugins:{legend:{position:'top'}},
+scales:{y:{beginAtZero:true}}
 }
 });
 
@@ -321,7 +345,6 @@ notices.innerHTML=d.map(n=>`
 
 });
 
-/* PRINT */
 function printReport(){
 let w=window.open();
 w.document.write(`
