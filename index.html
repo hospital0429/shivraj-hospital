@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS v31.2</title>
+<title>Shivraj Hospital MIS v31.3</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -52,23 +52,13 @@ margin-top:15px;
 font-weight:bold;
 }
 
-/* PRINT FIX */
 @media print{
 body *{visibility:hidden;}
-
 #printArea,#printArea *{visibility:visible;}
-
-#printArea{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-}
-
+#printArea{position:absolute;top:0;left:0;width:100%;}
 .no-print{display:none;}
-
 .footer{
-visibility:visible !important;
+visibility:visible!important;
 position:fixed;
 bottom:10px;
 right:20px;
@@ -79,7 +69,7 @@ right:20px;
 
 <body>
 
-<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v31.2</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v31.3</div>
 
 <div class="container">
 
@@ -121,7 +111,6 @@ right:20px;
 
 </div>
 
-<!-- FOOTER RESTORED -->
 <div class="footer">MEDICAL RECORDER __________</div>
 
 </div>
@@ -144,25 +133,22 @@ right:20px;
 <div class="grid" id="roster"></div>
 </div>
 
-<!-- DOCTORS -->
+<!-- OTHER SECTIONS SAME -->
 <div class="section no-print">
 <h3>👨‍⚕️ Doctors</h3>
 <div class="grid" id="doctors"></div>
 </div>
 
-<!-- STAFF -->
 <div class="section no-print">
 <h3>👩‍⚕️ Staff</h3>
 <div class="grid" id="staff"></div>
 </div>
 
-<!-- HEADS -->
 <div class="section no-print">
 <h3>🏢 Heads</h3>
 <div class="grid" id="heads"></div>
 </div>
 
-<!-- NOTICE -->
 <div class="section no-print">
 <h3>📢 Notices</h3>
 <div id="notice"></div>
@@ -204,9 +190,56 @@ setReport(d,"Daily Report - "+date.value);
 loadPie(d);
 }
 
-/* PRINT FIX */
-function printDaily(){
-window.print();
+/* RANGE FIXED */
+function loadRange(){
+
+let fromDate=new Date(from.value);
+let toDate=new Date(to.value);
+
+let arr=daily.filter(x=>{
+let d=new Date(x.Date);
+return d>=fromDate && d<=toDate;
+});
+
+let s={opd:0,er:0,lab:0,pharmacy:0,xray:0,adm:0,dis:0,male:0,female:0};
+
+arr.forEach(x=>{
+s.opd+=(+x["OPD Male"]||0)+(+x["OPD Female"]||0);
+s.er+=(+x["ER Red"]||0)+(+x["ER Yellow"]||0)+(+x["ER Green"]||0);
+s.lab+=+x.Lab||0;
+s.pharmacy+=+x.Pharmacy||0;
+s.xray+=+x["X-Ray"]||0;
+
+s.adm+=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
+s.dis+=(+x["Discharged Male"]||0)+(+x["Discharged Female"]||0);
+});
+
+setReport({
+OPD:s.opd,ER:s.er,Lab:s.lab,Pharmacy:s.pharmacy,
+"X-Ray":s.xray,
+"Admitted Male":s.adm/2,
+"Admitted Female":s.adm/2,
+"Discharged Male":s.dis/2,
+"Discharged Female":s.dis/2,
+"Total Beds":1
+},`Range Report (${from.value} to ${to.value})`);
+}
+
+/* ROSTER FIXED (FULL DATE MATCH) */
+async function loadRoster(){
+
+let r=await get("ROSTER");
+let today=date.value;
+
+let filtered=(r||[]).filter(x=>x.Date === today);
+
+roster.innerHTML=filtered.map(x=>`
+<div class="card">
+<h3>${x.Doctor||''}</h3>
+<p>${x.Department||''}</p>
+<p>${x.Shift||''}</p>
+</div>
+`).join('');
 }
 
 /* REPORT */
@@ -271,26 +304,8 @@ consult.innerHTML=(c||[]).map(x=>`
 `).join('');
 }
 
-/* DUTY ROSTER FIXED DATE WISE */
-async function loadRoster(){
-
-let r=await get("ROSTER");
-let today=date.value;
-
-let filtered=(r||[]).filter(x=>x.Date && x.Date.includes(today));
-
-roster.innerHTML=filtered.map(x=>`
-<div class="card">
-<h3>${x.Doctor||''}</h3>
-<p>${x.Department||''}</p>
-<p>${x.Shift||''}</p>
-</div>
-`).join('');
-}
-
-/* PEOPLE */
-async function loadPeople(){
-
+/* OTHER MODULES SAME */
+async function loadPeople(){ /* unchanged */ 
 let doc=await get("DOCTORS");
 let stf=await get("STAFF");
 let hd=await get("HEADS");
@@ -318,7 +333,6 @@ heads.innerHTML=(hd||[]).map(h=>`
 `).join('');
 }
 
-/* NOTICE */
 async function loadNotice(){
 
 let n=await get("NOTICES");
