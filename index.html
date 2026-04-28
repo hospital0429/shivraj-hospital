@@ -2,12 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS System</title>
+<title>Shivraj Hospital MIS - FINAL</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{margin:0;font-family:Segoe UI;background:#eef5ff;}
+body{margin:0;font-family:Arial;background:#eef5ff;}
 
 .header{
 background:#0d6efd;color:white;text-align:center;
@@ -24,13 +24,13 @@ gap:12px;
 
 .card{
 background:white;padding:12px;border-radius:10px;
-text-align:center;
 box-shadow:0 3px 8px rgba(0,0,0,0.1);
+text-align:center;
 }
 
 .section{margin-top:25px;}
 
-input,button,select{
+input,button{
 padding:8px;border-radius:6px;border:1px solid #ccc;
 }
 
@@ -38,21 +38,14 @@ button{
 background:#0d6efd;color:white;border:none;cursor:pointer;
 }
 
-.notice-card{
-background:white;padding:12px;margin-bottom:10px;border-radius:10px;
-}
+img{width:100%;border-radius:8px;}
 
-img{width:100%;border-radius:8px;margin-top:5px;}
+.no-print{}
 
-.occ-green{background:#198754;color:white;padding:6px;border-radius:6px;}
-.occ-yellow{background:#ffc107;color:black;padding:6px;border-radius:6px;}
-.occ-red{background:#dc3545;color:white;padding:6px;border-radius:6px;}
-
-/* PRINT ONLY REPORT */
 @media print{
 body *{visibility:hidden;}
 #printArea,#printArea *{visibility:visible;}
-#printArea{position:absolute;left:0;top:0;width:100%;}
+#printArea{position:absolute;top:0;left:0;width:100%;}
 .no-print{display:none;}
 }
 </style>
@@ -60,34 +53,32 @@ body *{visibility:hidden;}
 
 <body>
 
-<div class="header no-print">
-🏥 Shivraj Hospital MIS Dashboard
-</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM</div>
 
 <div class="container">
 
-<!-- DAILY FILTER -->
+<!-- DATE FILTER -->
 <div class="no-print" style="text-align:center;">
-<input type="date" id="selectedDate">
-<button onclick="loadDaily()">Search</button>
+<input type="date" id="date">
+<button onclick="loadDaily()">Load</button>
 <button onclick="window.print()">Print</button>
 </div>
 
-<!-- RANGE REPORT -->
+<!-- RANGE -->
 <div class="no-print" style="text-align:center;margin-top:10px;">
-<h3>📊 Range Report</h3>
-<input type="date" id="fromDate">
-<input type="date" id="toDate">
-<button onclick="generateRange()">Generate</button>
+<input type="date" id="from">
+<input type="date" id="to">
+<button onclick="rangeReport()">Range Report</button>
 </div>
 
-<div id="rangeResult"></div>
+<div id="rangeBox"></div>
 
 <!-- PRINT AREA -->
 <div id="printArea">
 
 <h2 style="text-align:center;">SHIVRAJ HOSPITAL</h2>
-<h3 id="reportDate" style="text-align:center;"></h3>
+<h3 id="title"></h3>
+
 <hr>
 
 <div class="grid">
@@ -101,7 +92,6 @@ body *{visibility:hidden;}
 <div class="card">USG<br><b id="usg">0</b></div>
 
 <div class="card">Indoor<br><b id="indoor">0</b></div>
-<div class="card">Occupancy<br><b id="occ">0%</b></div>
 
 </div>
 
@@ -109,19 +99,37 @@ body *{visibility:hidden;}
 
 <!-- GRAPH -->
 <div class="section no-print">
-<h2>📊 Monthly Graph</h2>
-<canvas id="monthlyChart"></canvas>
+<h2>Monthly Graph</h2>
+<canvas id="bar"></canvas>
 </div>
 
 <div class="section no-print">
-<h2>📈 Occupancy Trend</h2>
-<canvas id="trendChart"></canvas>
+<h2>Occupancy Trend</h2>
+<canvas id="line"></canvas>
 </div>
 
 <!-- CONSULTANT -->
 <div class="section no-print">
-<h2>🩺 Monday Consultant Schedule</h2>
-<div class="grid" id="consultantBox"></div>
+<h2>🩺 Monday Consultant</h2>
+<div class="grid" id="consultant"></div>
+</div>
+
+<!-- DOCTORS -->
+<div class="section no-print">
+<h2>Doctors</h2>
+<div class="grid" id="doctors"></div>
+</div>
+
+<!-- STAFF -->
+<div class="section no-print">
+<h2>Staff</h2>
+<div class="grid" id="staff"></div>
+</div>
+
+<!-- HEADS -->
+<div class="section no-print">
+<h2>Heads</h2>
+<div class="grid" id="heads"></div>
 </div>
 
 </div>
@@ -130,12 +138,12 @@ body *{visibility:hidden;}
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
-let daily=[], monthly=[], consultant=[];
+let daily=[], monthly=[], consult=[];
 
-/* SAFE LOAD */
-async function fetchSheet(name){
+/* SAFE FETCH */
+async function get(sheet){
 try{
-let r=await fetch(`https://opensheet.elk.sh/${sheetID}/${name}`);
+let r=await fetch(`https://opensheet.elk.sh/${sheetID}/${sheet}`);
 return await r.json();
 }catch(e){return [];}
 }
@@ -143,15 +151,18 @@ return await r.json();
 /* INIT */
 async function init(){
 
-daily = await fetchSheet("DAILY DATA");
-monthly = await fetchSheet("MONTHLY DATA");
-consultant = await fetchSheet("CONSULTANT_SCHEDULE");
+daily = await get("DAILY DATA");
+monthly = await get("MONTHLY DATA");
+consult = await get("CONSULTANT_SCHEDULE");
 
 loadDaily();
-loadGraphs();
+graphs();
 loadConsultant();
+loadDoctors();
+loadStaff();
+loadHeads();
 
-selectedDate.value=new Date().toISOString().split("T")[0];
+date.value=new Date().toISOString().split("T")[0];
 }
 
 init();
@@ -159,84 +170,75 @@ init();
 /* DAILY */
 function loadDaily(){
 
-let sel=selectedDate.value;
+let d=daily.find(x=>x.Date && x.Date.includes(date.value));
+if(!d) return;
 
-let f=daily.find(x=>x.Date && x.Date.split("T")[0]===sel);
-if(!f) return;
+opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
+er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
+lab.innerText=d.Lab||0;
+pharmacy.innerText=d.Pharmacy||0;
+ecg.innerText=d.ECG||0;
+usg.innerText=d.USG||0;
 
-opd.innerText=(+f["OPD Male"]||0)+(+f["OPD Female"]||0);
-er.innerText=(+f["ER Red"]||0)+(+f["ER Yellow"]||0)+(+f["ER Green"]||0);
-lab.innerText=f.Lab||0;
-pharmacy.innerText=f.Pharmacy||0;
-ecg.innerText=f.ECG||0;
-usg.innerText=f.USG||0;
+indoor.innerText=(+d["Admitted Male"]||0)+(+d["Admitted Female"]||0);
 
-let total=(+f["Admitted Male"]||0)+(+f["Admitted Female"]||0);
-indoor.innerText=total;
-
-let beds=+f["Total Beds"]||1;
-occ.innerText=(total/beds*100).toFixed(1)+"%";
-
-reportDate.innerText="Daily Report - "+sel;
+title.innerText="Daily Report - "+date.value;
 }
 
-/* RANGE REPORT FIXED */
-function generateRange(){
+/* RANGE */
+function rangeReport(){
 
-let from=new Date(fromDate.value);
-let to=new Date(toDate.value);
+let f=new Date(from.value);
+let t=new Date(to.value);
 
-let filtered=daily.filter(x=>{
+let arr=daily.filter(x=>{
 let d=new Date(x.Date);
-return d>=from && d<=to;
+return d>=f && d<=t;
 });
 
-let sum={opd:0,er:0,lab:0,pharmacy:0,ecg:0,usg:0,indoor:0};
+let s={opd:0,er:0,lab:0,pharmacy:0,ecg:0,usg:0,indoor:0};
 
-filtered.forEach(f=>{
-sum.opd+=(+f["OPD Male"]||0)+(+f["OPD Female"]||0);
-sum.er+=(+f["ER Red"]||0)+(+f["ER Yellow"]||0)+(+f["ER Green"]||0);
-sum.lab+=+f.Lab||0;
-sum.pharmacy+=+f.Pharmacy||0;
-sum.ecg+=+f.ECG||0;
-sum.usg+=+f.USG||0;
-sum.indoor+=(+f["Admitted Male"]||0)+(+f["Admitted Female"]||0);
+arr.forEach(x=>{
+s.opd+=(+x["OPD Male"]||0)+(+x["OPD Female"]||0);
+s.er+=(+x["ER Red"]||0)+(+x["ER Yellow"]||0)+(+x["ER Green"]||0);
+s.lab+=+x.Lab||0;
+s.pharmacy+=+x.Pharmacy||0;
+s.ecg+=+x.ECG||0;
+s.usg+=+x.USG||0;
+s.indoor+=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
 });
 
-rangeResult.innerHTML=`
+rangeBox.innerHTML=`
 <div class="card">
-<h3>📊 RANGE REPORT</h3>
-<p>OPD: ${sum.opd}</p>
-<p>ER: ${sum.er}</p>
-<p>Lab: ${sum.lab}</p>
-<p>Pharmacy: ${sum.pharmacy}</p>
-<p>ECG: ${sum.ecg}</p>
-<p>USG: ${sum.usg}</p>
-<p>Indoor: ${sum.indoor}</p>
+<h3>Range Report</h3>
+<p>OPD: ${s.opd}</p>
+<p>ER: ${s.er}</p>
+<p>Lab: ${s.lab}</p>
+<p>Pharmacy: ${s.pharmacy}</p>
+<p>Indoor: ${s.indoor}</p>
 </div>`;
 }
 
-/* GRAPH FIXED */
-function loadGraphs(){
+/* GRAPH */
+function graphs(){
 
-new Chart(monthlyChart,{
+new Chart(bar,{
 type:'bar',
 data:{
 labels:monthly.map(x=>x.Month),
 datasets:[
 {label:'OPD',data:monthly.map(x=>+x.OPD||0),backgroundColor:'blue'},
-{label:'ER',data:monthly.map(x=>+x.ER||0),backgroundColor:'red'},
-{label:'Lab',data:monthly.map(x=>+x.Lab||0),backgroundColor:'green'}
+{label:'ER',data:monthly.map(x=>+x.ER||0),backgroundColor:'red'}
 ]
 }
 });
 
-new Chart(trendChart,{
+new Chart(line,{
 type:'line',
 data:{
 labels:monthly.map(x=>x.Month),
 datasets:[{
-label:'Occupancy %',
+label:'Trend',
 data:monthly.map(x=>{
 let t=(+x["Admitted Male"]||0)+(+x["Admitted Female"]||0);
 let b=+x["Total Beds"]||1;
@@ -249,21 +251,52 @@ borderColor:'orange'
 
 }
 
-/* CONSULTANT FIXED */
+/* CONSULTANT */
 function loadConsultant(){
 
 let today=new Date();
 today.setDate(today.getDate()-today.getDay()+1);
 let mon=today.toISOString().split("T")[0];
 
-let list=consultant.filter(x=>x.Date===mon);
+let list=consult.filter(x=>x.Date===mon);
 
-consultantBox.innerHTML=list.map(x=>`
+consultant.innerHTML=list.map(x=>`
 <div class="card">
 <h3>${x.Department}</h3>
 <p>${x.Doctor}</p>
 </div>
 `).join('');
+}
+
+/* DOCTORS */
+function loadDoctors(){
+get("DOCTORS").then(d=>{
+doctors.innerHTML=d.map(x=>`
+<div class="card">
+<img src="${x.Photo||''}">
+<h3>${x.Name}</h3>
+</div>`).join('');
+});
+}
+
+function loadStaff(){
+get("STAFF").then(d=>{
+staff.innerHTML=d.map(x=>`
+<div class="card">
+<img src="${x.Photo||''}">
+<h3>${x.Name}</h3>
+</div>`).join('');
+});
+}
+
+function loadHeads(){
+get("HEADS").then(d=>{
+heads.innerHTML=d.map(x=>`
+<div class="card">
+<img src="${x.Photo||''}">
+<h3>${x.Name}</h3>
+</div>`).join('');
+});
 }
 
 </script>
