@@ -28,7 +28,9 @@ text-align:center;box-shadow:0 3px 8px rgba(0,0,0,0.1);
 input,button,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
 button{background:#0d6efd;color:white;border:none;cursor:pointer;}
 
-.notice-card{background:white;padding:12px;margin-bottom:10px;border-radius:10px;}
+.notice-card{
+background:white;padding:12px;margin-bottom:10px;border-radius:10px;
+}
 
 .notice-btn{padding:6px 10px;border-radius:6px;text-decoration:none;margin-right:6px;}
 .view{background:#0d6efd;color:white;}
@@ -36,12 +38,10 @@ button{background:#0d6efd;color:white;border:none;cursor:pointer;}
 
 img{width:100%;border-radius:8px;margin-top:5px;}
 
-/* OCCUPANCY */
 .occ-green{background:#198754;color:white;padding:6px;border-radius:6px;}
 .occ-yellow{background:#ffc107;color:black;padding:6px;border-radius:6px;}
 .occ-red{background:#dc3545;color:white;padding:6px;border-radius:6px;}
 
-/* PRINT */
 @media print{
 body *{visibility:hidden;}
 #printArea,#printArea *{visibility:visible;}
@@ -57,6 +57,7 @@ body *{visibility:hidden;}
 
 <div class="container">
 
+<!-- FILTER -->
 <div class="no-print" style="text-align:center;">
 <input type="date" id="selectedDate">
 <button onclick="loadData()">Search</button>
@@ -109,16 +110,46 @@ body *{visibility:hidden;}
 
 </div>
 
-<!-- 📊 MONTHLY GRAPH (RESTORED) -->
+<!-- GRAPHS -->
 <div class="section no-print">
 <h2>Monthly Comparative Graph</h2>
 <canvas id="chart"></canvas>
 </div>
 
-<!-- 📈 OCCUPANCY TREND (RESTORED) -->
 <div class="section no-print">
 <h2>Occupancy Trend</h2>
 <canvas id="occChart"></canvas>
+</div>
+
+<!-- DOCTORS -->
+<div class="section no-print">
+<h2>Doctors</h2>
+<div class="grid" id="doctors"></div>
+</div>
+
+<!-- STAFF -->
+<div class="section no-print">
+<h2>Staff</h2>
+<div class="grid" id="staff"></div>
+</div>
+
+<!-- HEADS -->
+<div class="section no-print">
+<h2>Department Heads</h2>
+<div class="grid" id="heads"></div>
+</div>
+
+<!-- ROSTER -->
+<div class="section no-print">
+<h2>Duty Roster</h2>
+<select id="rosterDate"></select>
+<div class="grid" id="rosterList"></div>
+</div>
+
+<!-- NOTICES -->
+<div class="section no-print">
+<h2>Notices</h2>
+<div id="notices"></div>
 </div>
 
 </div>
@@ -127,9 +158,9 @@ body *{visibility:hidden;}
 
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 
-let allData=[];
+let allData=[], rosterData=[];
 
-/* LOAD DAILY */
+/* DAILY LOAD */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
 .then(r=>r.json())
 .then(d=>{allData=d||[];init();});
@@ -211,7 +242,7 @@ else{occBox.classList.add("occ-red");msg.innerText="Full";}
 /* PRINT */
 function printReport(){window.print();}
 
-/* 📊 MONTHLY GRAPH RESTORED */
+/* GRAPHS */
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 .then(r=>r.json())
 .then(d=>{
@@ -223,13 +254,11 @@ labels:d.map(x=>x.Month),
 datasets:[
 {label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'blue'},
 {label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'red'},
-{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'green'},
-{label:'Delivery',data:d.map(x=>+x.Delivery||0),backgroundColor:'orange'}
+{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'green'}
 ]
 }
 });
 
-/* 📈 OCCUPANCY TREND RESTORED */
 new Chart(occChart,{
 type:'line',
 data:{
@@ -246,6 +275,56 @@ borderColor:'red'
 }
 });
 
+});
+
+/* LOAD DOCTORS/STAFF/HEADS SAFE */
+function load(url,id){
+fetch(url)
+.then(r=>r.json())
+.then(d=>{
+document.getElementById(id).innerHTML=(d||[]).map(x=>`
+<div class="card">
+<img src="${x.Photo||''}" onerror="this.style.display='none'">
+<h3>${x.Name||''}</h3>
+<p>${x.Department||x.Position||''}</p>
+</div>`).join('');
+}).catch(()=>{});
+}
+
+load(`https://opensheet.elk.sh/${sheetID}/DOCTORS`,'doctors');
+load(`https://opensheet.elk.sh/${sheetID}/STAFF`,'staff');
+load(`https://opensheet.elk.sh/${sheetID}/HEADS`,'heads');
+
+/* ROSTER */
+fetch(`https://opensheet.elk.sh/${sheetID}/ROSTER`)
+.then(r=>r.json())
+.then(d=>{
+rosterData=d||[];
+let dates=[...new Set(d.map(x=>x.Date))];
+rosterDate.innerHTML=dates.map(x=>`<option>${x}</option>`).join('');
+});
+
+rosterDate.onchange=()=>{
+let f=rosterData.filter(x=>x.Date===rosterDate.value);
+rosterList.innerHTML=f.map(x=>`
+<div class="card">
+<h3>${x.Doctor}</h3>
+<p>${x.Department}</p>
+<p>${x.Shift}</p>
+</div>`).join('');
+};
+
+/* NOTICES */
+fetch(`https://opensheet.elk.sh/${sheetID}/NOTICES`)
+.then(r=>r.json())
+.then(d=>{
+notices.innerHTML=(d||[]).map(n=>`
+<div class="notice-card">
+<h3>${n.Title}</h3>
+<p>${n.Description}</p>
+<a class="notice-btn view" href="${n.PDF}" target="_blank">Open</a>
+<a class="notice-btn download" href="${n.PDF}" download>Download</a>
+</div>`).join('');
 });
 
 </script>
