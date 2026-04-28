@@ -8,13 +8,13 @@
 <script src="https://unpkg.com/nepali-date-converter/dist/index.min.js"></script>
 
 <style>
-body{margin:0;font-family:Segoe UI;background:#f0f6ff;}
-.header{background:#0d6efd;color:white;text-align:center;padding:15px;font-size:24px;}
+body{margin:0;font-family:Segoe UI;background:#eef5ff;}
+.header{background:#0d6efd;color:white;text-align:center;padding:15px;font-size:22px;}
 .container{padding:20px;}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
-.card{background:white;padding:12px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);text-align:center;}
-.card h3{color:#0d6efd;margin:0;}
-.value{font-size:18px;font-weight:bold;margin-top:8px;}
+.card{background:white;padding:12px;border-radius:10px;text-align:center;box-shadow:0 3px 8px rgba(0,0,0,0.1);}
+.card h3{margin:0;color:#0d6efd;}
+.value{font-size:18px;font-weight:bold;margin-top:5px;}
 .section{margin-top:25px;}
 input,button{padding:8px;border-radius:6px;border:1px solid #ccc;}
 button{background:#0d6efd;color:white;border:none;}
@@ -31,10 +31,9 @@ Shivraj Hospital Dashboard
 
 <div class="container">
 
-<!-- BS DATE INPUT -->
 <div style="text-align:center;margin-bottom:10px;">
 <input type="date" id="datePicker">
-<button onclick="searchBS()">Search (BS)</button>
+<button onclick="searchData()">Search</button>
 </div>
 
 <h3 id="reportTitle"></h3>
@@ -48,7 +47,10 @@ Shivraj Hospital Dashboard
 <div class="card"><h3>ANC</h3><div id="anc" class="value">0</div></div>
 </div>
 
+<div class="section">
+<h2>Monthly Graph</h2>
 <canvas id="chart"></canvas>
+</div>
 
 </div>
 
@@ -57,76 +59,54 @@ Shivraj Hospital Dashboard
 const sheetID="1ssepRWNPq9Jy7vnTGXNT0e6Msnn0CFWW2PACQaq3ojw";
 let allData=[];
 
-/* ======================
-   CLOCK
-====================== */
-function clock(){
+/* ================= CLOCK ================= */
+function updateClock(){
 let n=new Date();
 let h=n.getHours(),m=n.getMinutes(),s=n.getSeconds();
 let p="AM";
 if(h>=12)p="PM";
 if(h>12)h-=12;
 if(h===0)h=12;
-clockEl.innerText=(h<10?"0"+h:h)+":"+(m<10?"0"+m:m)+":"+(s<10?"0"+s:s)+" "+p;
+document.getElementById("clock").innerText=
+(h<10?"0"+h:h)+":"+(m<10?"0"+m:m)+":"+(s<10?"0"+s:s)+" "+p;
 }
-let clockEl=document.getElementById("clock");
-setInterval(clock,1000);clock();
+setInterval(updateClock,1000);updateClock();
 
-/* ======================
-   TODAY BS DATE
-====================== */
-function getTodayBS(){
+/* ================= BS DATE ================= */
+function setTodayBS(){
 let bs=NepaliDateConverter.ADToBS(new Date());
-return bs.year+"-"+String(bs.month).padStart(2,'0')+"-"+String(bs.day).padStart(2,'0');
+document.getElementById("todayBS").innerText=
+bs.monthName+" "+bs.day+", "+bs.year;
 }
+setTodayBS();
 
-function formatBS(){
-let bs=NepaliDateConverter.ADToBS(new Date());
-return bs.monthName+" "+bs.day+", "+bs.year;
-}
-
-document.getElementById("todayBS").innerText=formatBS();
-
-/* ======================
-   LOAD DATA
-====================== */
+/* ================= LOAD DAILY ================= */
 fetch(`https://opensheet.elk.sh/${sheetID}/DAILY DATA`)
 .then(r=>r.json())
 .then(d=>{
-allData=d;
+allData=d||[];
 init();
 });
 
-/* ======================
-   INIT
-====================== */
+/* ================= INIT ================= */
 function init(){
-let todayBS=getTodayBS();
-document.getElementById("datePicker").value=convertBSToAD(todayBS);
-searchBS();
+
+let today=new Date();
+let y=today.getFullYear();
+let m=String(today.getMonth()+1).padStart(2,'0');
+let d=String(today.getDate()).padStart(2,'0');
+
+let todayStr=y+"-"+m+"-"+d;
+
+document.getElementById("datePicker").value=todayStr;
+
+searchData(); // load today
 }
 
-/* ======================
-   BS → AD CONVERT
-====================== */
-function convertBSToAD(bsDate){
-let [y,m,d]=bsDate.split("-");
-let ad=NepaliDateConverter.BSToAD(y,m,d);
-let date=new Date(ad.year,ad.month-1,ad.day);
+/* ================= SEARCH ================= */
+function searchData(){
 
-let yy=date.getFullYear();
-let mm=String(date.getMonth()+1).padStart(2,'0');
-let dd=String(date.getDate()).padStart(2,'0');
-
-return yy+"-"+mm+"-"+dd;
-}
-
-/* ======================
-   SEARCH (BS BASED)
-====================== */
-function searchBS(){
-
-let selectedAD=document.getElementById("datePicker").value;
+let selected=document.getElementById("datePicker").value;
 
 let found=allData.find(row=>{
 
@@ -139,24 +119,25 @@ let d=String(dt.getDate()).padStart(2,'0');
 
 let formatted=y+"-"+m+"-"+d;
 
-return formatted===selectedAD;
+return formatted===selected;
 });
 
 if(found){
+
 show(found);
 
-let bs=NepaliDateConverter.ADToBS(new Date(selectedAD));
+/* convert AD → BS for title */
+let bs=NepaliDateConverter.ADToBS(new Date(selected));
+
 document.getElementById("reportTitle").innerText=
-"Report Date (BS): "+bs.monthName+" "+bs.day+", "+bs.year;
+"Report (BS): "+bs.monthName+" "+bs.day+", "+bs.year;
 
 }else{
-alert("No data found");
+alert("No data found for selected date");
 }
 }
 
-/* ======================
-   SHOW DATA
-====================== */
+/* ================= SHOW ================= */
 function show(d){
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
 er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
@@ -166,23 +147,24 @@ delivery.innerText=d.Delivery||0;
 anc.innerText=d.ANC||0;
 }
 
-/* ======================
-   GRAPH
-====================== */
+/* ================= MONTHLY GRAPH ================= */
 fetch(`https://opensheet.elk.sh/${sheetID}/MONTHLY%20DATA`)
 .then(r=>r.json())
 .then(d=>{
-new Chart(chart,{
+
+new Chart(document.getElementById("chart"),{
 type:'bar',
 data:{
 labels:d.map(x=>x.Month),
 datasets:[
-{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'blue'},
-{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'red'},
-{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'green'}
+{label:'OPD',data:d.map(x=>+x.OPD||0),backgroundColor:'#0d6efd'},
+{label:'ER',data:d.map(x=>+x.ER||0),backgroundColor:'#dc3545'},
+{label:'ANC',data:d.map(x=>+x.ANC||0),backgroundColor:'#198754'},
+{label:'Delivery',data:d.map(x=>+x.Delivery||0),backgroundColor:'#ffc107'}
 ]
 }
 });
+
 });
 
 </script>
