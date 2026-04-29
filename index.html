@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Shivraj Hospital MIS v34</title>
+<title>Shivraj Hospital MIS v33</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -52,42 +52,16 @@ body *{visibility:hidden;}
 #printArea{position:absolute;top:0;left:0;width:100%;}
 .no-print{display:none;}
 }
-
-/* POPUP */
-#popup{
-display:none;
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:rgba(0,0,0,0.7);
-justify-content:center;
-align-items:center;
-z-index:9999;
-}
 </style>
 </head>
 
 <body>
 
-<!-- POPUP -->
-<div id="popup">
-<div style="background:white;padding:15px;border-radius:10px;width:320px;position:relative;text-align:center;">
-
-<span onclick="closePopup()" style="position:absolute;top:8px;right:12px;cursor:pointer;font-weight:bold;">✖</span>
-
-<h3 id="popupTitle">Notice</h3>
-<img id="popupImage" src="">
-<p id="popupText"></p>
-
-<button onclick="closePopup()">Close</button>
-
-</div>
-</div>
-
-<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v34</div>
+<div class="header no-print">🏥 Shivraj Hospital MIS SYSTEM v33</div>
 
 <div class="container">
 
+<!-- FILTER -->
 <div class="no-print" style="text-align:center;">
 <input type="date" id="date">
 <button onclick="loadDaily()">Daily Load</button>
@@ -101,13 +75,16 @@ z-index:9999;
 <button onclick="printRange()">Print Range</button>
 </div>
 
+<!-- PRINT AREA -->
 <div id="printArea">
 
 <h2 style="text-align:center;">SHIVRAJ HOSPITAL</h2>
 <h3 id="title"></h3>
+
 <hr>
 
 <div class="grid">
+
 <div class="card">OPD<br><b id="opd">0</b></div>
 <div class="card">ER<br><b id="er">0</b></div>
 <div class="card">Lab<br><b id="lab">0</b></div>
@@ -119,52 +96,68 @@ z-index:9999;
 <div class="card">Admitted<br><b id="admitted">0</b></div>
 <div class="card">Discharged<br><b id="discharged">0</b></div>
 <div class="card">Occupancy<br><b id="occupancy">0%</b></div>
+
 </div>
 
 <br>
-<div style="text-align:right;">MEDICAL RECORDER __________</div>
+
+<div style="text-align:right;">
+MEDICAL RECORDER __________
+</div>
 
 </div>
 
+<!-- PIE -->
 <div class="section no-print">
 <h3>👨‍⚕️ OPD Gender Distribution</h3>
 <canvas id="opdPie"></canvas>
 </div>
 
+<!-- CONSULTANT -->
 <div class="section no-print">
 <h3>🩺 Consultant Services</h3>
 <div class="grid" id="consult"></div>
 </div>
 
+<!-- EMERGENCY ROSTER (NEW) -->
 <div class="section no-print">
 <h3>🚨 Emergency Duty Roster</h3>
+
 <input type="date" id="emergencyDate">
 <button onclick="loadEmergencyRoster()">Load Roster</button>
+
 <div class="grid" id="emergencyRoster"></div>
 </div>
 
+<!-- DUTY ROSTER -->
 <div class="section no-print">
 <h3>📅 Duty Roster</h3>
+
 <input type="date" id="rosterDate">
 <button onclick="loadRoster()">Load</button>
+
 <div class="grid" id="roster"></div>
 </div>
 
+<!-- DOCTORS -->
 <div class="section no-print">
 <h3>👨‍⚕️ Doctors</h3>
 <div class="grid" id="doctors"></div>
 </div>
 
+<!-- STAFF -->
 <div class="section no-print">
 <h3>👩‍⚕️ Staff</h3>
 <div class="grid" id="staff"></div>
 </div>
 
+<!-- HEADS -->
 <div class="section no-print">
 <h3>🏢 Heads</h3>
 <div class="grid" id="heads"></div>
 </div>
 
+<!-- NOTICE -->
 <div class="section no-print">
 <h3>📢 Notices</h3>
 <div id="notice"></div>
@@ -188,10 +181,11 @@ let pieChart=null;
 
 /* INIT */
 async function init(){
-
 daily=await get("DAILY DATA");
 
-let today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kathmandu'});
+let today = new Date().toLocaleDateString('en-CA', {
+  timeZone: 'Asia/Kathmandu'
+});
 
 date.value=today;
 rosterDate.value=today;
@@ -203,54 +197,27 @@ loadRoster();
 loadPeople();
 loadNotice();
 loadEmergencyRoster();
-loadSundayPopup(); // NEW
 }
 init();
 
-/* POPUP */
-function showPopup(t,m,i){
-popupTitle.innerText=t;
-popupText.innerText=m;
-popupImage.src=i;
-popup.style.display="flex";
-}
-
-function closePopup(){
-popup.style.display="none";
-}
-
-/* SUNDAY ONLY POPUP */
-async function loadSundayPopup(){
-
-let n=await get("NOTICES");
-
-let day=new Date().toLocaleDateString('en-US',{
-weekday:'long',
-timeZone:'Asia/Kathmandu'
-});
-
-if(day!=="Sunday") return;
-
-let notice=(n||[]).find(x=>x.Day==="Sunday");
-
-if(notice){
-showPopup(notice.Title,notice.Description,notice.Image);
-}
-}
-
-/* बाकी सबै code unchanged (same as v33) */
-
 /* DAILY */
 function loadDaily(){
+
 let d=daily.find(x=>x.Date && x.Date.includes(date.value));
 if(!d) return;
+
 setReport(d,"Daily Report - "+date.value);
 renderPie(d);
 }
 
+/* REPORT */
 function setReport(d,titleText){
+
 opd.innerText=(+d["OPD Male"]||0)+(+d["OPD Female"]||0);
-er.innerText=(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
+
+er.innerText=
+(+d["ER Red"]||0)+(+d["ER Yellow"]||0)+(+d["ER Green"]||0);
+
 lab.innerText=d.Lab||0;
 pharmacy.innerText=d.Pharmacy||0;
 ecg.innerText=d.ECG||0;
@@ -258,10 +225,11 @@ usg.innerText=d.USG||0;
 xray.innerText=d["X-Ray"]||0;
 
 let adm=(+d["Admitted Male"]||0)+(+d["Admitted Female"]||0);
+let dis=(+d["Discharged Male"]||0)+(+d["Discharged Female"]||0);
 let beds=+d["Total Beds"]||1;
 
 admitted.innerText=adm;
-discharged.innerText=(+d["Discharged Male"]||0)+(+d["Discharged Female"]||0);
+discharged.innerText=dis;
 
 let occ=(adm/beds)*100;
 occupancy.innerText=occ.toFixed(1)+"%";
@@ -273,20 +241,29 @@ else occupancy.style.color="red";
 title.innerText=titleText;
 }
 
+/* PIE */
 function renderPie(d){
+
 let male=+d["OPD Male"]||0;
 let female=+d["OPD Female"]||0;
+
 if(pieChart) pieChart.destroy();
+
 pieChart=new Chart(opdPie,{
 type:'pie',
-data:{labels:[`Male (${male})`,`Female (${female})`],
-datasets:[{data:[male,female],backgroundColor:['red','blue']}]},
+data:{
+labels:[`Male (${male})`,`Female (${female})`],
+datasets:[{data:[male,female],backgroundColor:['red','blue']}]
+},
 options:{animation:{animateScale:true}}
 });
 }
 
+/* CONSULTANT */
 async function loadConsult(){
+
 let c=await get("CONSULTANT");
+
 consult.innerHTML=(c||[]).map(x=>`
 <div class="card">
 <h3>${x.Department||''}</h3>
@@ -296,53 +273,100 @@ consult.innerHTML=(c||[]).map(x=>`
 <p>ENT: ${x.ENT||'-'}</p>
 <p>Derma: ${x.Derma||'-'}</p>
 <p>Pedia: ${x.Pedia||'-'}</p>
-</div>`).join('');
+</div>
+`).join('');
 }
 
+/* EMERGENCY ROSTER */
 async function loadEmergencyRoster(){
+
 let data=await get("EMERGENCY_ROSTER");
+
 let d=emergencyDate.value;
+
 let f=(data||[]).filter(x=>x.Date===d);
-emergencyRoster.innerHTML=f.length?f.map(x=>`
+
+emergencyRoster.innerHTML=f.length ? f.map(x=>`
 <div class="card">
-<h3>${x.Shift}</h3>
-<p>${x.Paramedics}</p>
-</div>`).join(''):
-`<div class="card">No duty</div>`;
+
+<h3>
+${x.Shift==="Morning"?"🌅 Morning":
+ x.Shift==="Evening"?"🌇 Evening":"🌙 Night"}
+</h3>
+
+<p><b>Paramedics:</b> ${x.Paramedics||'-'}</p>
+<p><b>Dept:</b> ${x.Department||'-'}</p>
+
+</div>
+`).join('')
+:
+`<div class="card">No emergency duty assigned</div>`;
 }
 
+/* ROSTER */
 async function loadRoster(){
+
 let r=await get("ROSTER");
+
 let d=rosterDate.value;
+
 let f=(r||[]).filter(x=>x.Date && x.Date.includes(d));
+
 roster.innerHTML=f.map(x=>`
 <div class="card">
 <h3>${x.Doctor||''}</h3>
 <p>${x.Department||''}</p>
 <p>${x.Shift||''}</p>
-</div>`).join('');
+</div>
+`).join('');
 }
 
+/* PEOPLE */
 async function loadPeople(){
+
 let doc=await get("DOCTORS");
 let stf=await get("STAFF");
 let hd=await get("HEADS");
 
-doctors.innerHTML=(doc||[]).map(d=>`<div class="card"><img src="${d.Photo}"><h3 class="doctor-name">${d.Name}</h3></div>`).join('');
-staff.innerHTML=(stf||[]).map(s=>`<div class="card"><img src="${s.Photo}"><h3 class="staff-name">${s.Name}</h3><p class="staff-post">${s.Position}</p></div>`).join('');
-heads.innerHTML=(hd||[]).map(h=>`<div class="card"><img src="${h.Photo}"><h3>${h.Name}</h3></div>`).join('');
+doctors.innerHTML=(doc||[]).map(d=>`
+<div class="card">
+<img src="${d.Photo||''}">
+<h3 class="doctor-name">${d.Name||''}</h3>
+</div>
+`).join('');
+
+staff.innerHTML=(stf||[]).map(s=>`
+<div class="card">
+<img src="${s.Photo||''}">
+<h3 class="staff-name">${s.Name||''}</h3>
+<p class="staff-post">${s.Position||''}</p>
+</div>
+`).join('');
+
+heads.innerHTML=(hd||[]).map(h=>`
+<div class="card">
+<img src="${h.Photo||''}">
+<h3>${h.Name||''}</h3>
+</div>
+`).join('');
 }
 
+/* NOTICE */
 async function loadNotice(){
+
 let n=await get("NOTICES");
+
 notice.innerHTML=(n||[]).map(x=>`
 <div class="notice-card">
-<h3>${x.Title}</h3>
-<p>${x.Description}</p>
-<a href="${x.PDF}" target="_blank">Open</a>
-</div>`).join('');
+<h3>${x.Title||''}</h3>
+<p>${x.Description||''}</p>
+<a href="${x.PDF}" target="_blank">Open</a> |
+<a href="${x.PDF}" download>Download</a>
+</div>
+`).join('');
 }
 
+/* PRINT */
 function printDaily(){window.print();}
 function printRange(){window.print();}
 
