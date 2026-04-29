@@ -198,7 +198,6 @@ loadPeople();
 loadNotice();
 loadEmergencyRoster();
 }
-initRooms();
 init();
 
 /* DAILY */
@@ -375,15 +374,3 @@ function printRange(){window.print();}
 
 </body>
 </html>
-<div class="section no-print">
-<h3>🏢 Hospital Room Navigation</h3>
-
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-<button onclick="loadRooms('ALL')">ALL</button>
-<button onclick="loadRooms('BLOCK A')">BLOCK A</button>
-<button onclick="loadRooms('BLOCK B')">BLOCK B</button>
-<button onclick="loadRooms('BLOCK C')">BLOCK C</button>
-</div>
-
-<div id="roomTable"></div>
-</div>
